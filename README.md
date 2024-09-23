@@ -18,53 +18,53 @@ Komandos nariai:
 
 1. Prisijungimas:
 
-  -Žaidėjas gali prisijungti prie žaidimo ir pasirinkti komandą.
-  -Žaidimas prasidės, kai bus suformuotos dvi komandos.
+- Žaidėjas gali prisijungti prie žaidimo ir pasirinkti komandą.
+- Žaidimas prasidės, kai bus suformuotos dvi komandos.
   
 2.Pranešimai:
 
-  -Žaidėjai gauna informacinius pranešimus apie svarbius įvykius žaidimo metu.
+  - Žaidėjai gauna informacinius pranešimus apie svarbius įvykius žaidimo metu.
   
-  -Žaidėjui informuojama, kai jis pataiko į priešininko laivą.
+  - Žaidėjui informuojama, kai jis pataiko į priešininko laivą.
   
-  -Žaidėjui pranešama, jei nepavyko pataikyti į priešininko laivą.
+  - Žaidėjui pranešama, jei nepavyko pataikyti į priešininko laivą.
   
-  -Žaidėjai mato savo laivų surinktus taškus.
+  - Žaidėjai mato savo laivų surinktus taškus.
   
 3.Laivų išdėstymas:
 
-  -Žaidėjai gali patys išsidėlioti savo laivus ant žemėlapio.
+  - Žaidėjai gali patys išsidėlioti savo laivus ant žemėlapio.
   
-  -Yra galimybė atsitiktinai paskirstyti laivus automatiškai.
+  - Yra galimybė atsitiktinai paskirstyti laivus automatiškai.
   
   
 4.Papildomų laivų pridėjimas:
 
- -Yra nustatytas maksimalus skaičius papildomų laivų, kuriuos galima pridėti.
+ - Yra nustatytas maksimalus skaičius papildomų laivų, kuriuos galima pridėti.
  
-  -Žaidėjai gali pridėti papildomų laivų, jei neviršijama nustatyta riba.
+  - Žaidėjai gali pridėti papildomų laivų, jei neviršijama nustatyta riba.
   
 5.Pasiruošimas žaidimui:
 
-  -Žaidėjai gali paspausti "paruoštas" mygtuką, kai jie pasirengę pradėti žaidimą.
+  - Žaidėjai gali paspausti "paruoštas" mygtuką, kai jie pasirengę pradėti žaidimą.
   
-  -Žaidimas prasideda tik tuomet, kai abi komandos yra pasiruošusios.
+  - Žaidimas prasideda tik tuomet, kai abi komandos yra pasiruošusios.
   
 6.Žaidimo eiga:
 
-  -Žaidėjai paeiliui atlieka ėjimus.
+  - Žaidėjai paeiliui atlieka ėjimus.
   
-  -Kiekvienas ėjimas apima šūvį į priešininko laivą.
+  - Kiekvienas ėjimas apima šūvį į priešininko laivą.
   
-  -Žaidėjas gali keisti žaidimo tematiką (diena/naktis), kas daro įtaką šūvio jėgos skaičiavimui.
+  - Žaidėjas gali keisti žaidimo tematiką (diena/naktis), kas daro įtaką šūvio jėgos skaičiavimui.
   
-  -Žaidėjas pasirenka, kuris laivas šaudys, ir bombos tipą, po to apskaičiuojamos šūvio koordinatės pagal pasirinkto laivo dydį ir bombos tipą.
+  - Žaidėjas pasirenka, kuris laivas šaudys, ir bombos tipą, po to apskaičiuojamos šūvio koordinatės pagal pasirinkto laivo dydį ir bombos tipą.
   
-  -Yra galimybė perkrauti žaidimą ir pradėti iš naujo.
+  - Yra galimybė perkrauti žaidimą ir pradėti iš naujo.
   
-  -Žaidėjui suteikiama 20 ėjimų, per kuriuos jis turi sunaikinti visus priešininko laivus; jei ėjimai baigiasi anksčiau, žaidėjas pralaimi.
+  - Žaidėjui suteikiama 20 ėjimų, per kuriuos jis turi sunaikinti visus priešininko laivus; jei ėjimai baigiasi anksčiau, žaidėjas pralaimi.
   
-  -Kiekvienas laivas turi ribotą šūvių kiekį; kai laivui baigiasi šūviai, jis pašalinamas iš žaidimo, o jei visi laivai iššaudo visus šūvius, žaidimas baigiasi.
+  - Kiekvienas laivas turi ribotą šūvių kiekį; kai laivui baigiasi šūviai, jis pašalinamas iš žaidimo, o jei visi laivai iššaudo visus šūvius, žaidimas baigiasi.
   
   -Pataikius į visas laivo vietas, jo gyvybės nukrenta iki nulio.
   
