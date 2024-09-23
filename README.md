@@ -70,3 +70,6 @@ Komandos nariai:
   
 
 ### Nefunkciniai reikalavimai
+
+7. Sąsajos naudojimas:
+   - Vartotojo sąsaja turi būti aiški ir lengvai suprantama, leidžiant žaidėjams patogiai sąveikauti su sistema.
