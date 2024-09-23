@@ -66,7 +66,7 @@ Komandos nariai:
   
   - Kiekvienas laivas turi ribotą šūvių kiekį; kai laivui baigiasi šūviai, jis pašalinamas iš žaidimo, o jei visi laivai iššaudo visus šūvius, žaidimas baigiasi.
   
-  -Pataikius į visas laivo vietas, jo gyvybės nukrenta iki nulio.
+  - Pataikius į visas laivo vietas, jo gyvybės nukrenta iki nulio.
   
 
 ### Nefunkciniai reikalavimai
