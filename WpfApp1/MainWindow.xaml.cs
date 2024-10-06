@@ -70,13 +70,14 @@ namespace WpfApp1
         private readonly List<Snowflake> snowflakes = new List<Snowflake>();
         private readonly Random random = new Random();
         private GameState currentGameState = new MatchmakingState();
+        private DispatcherTimer _uiTimer;
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeUi();
             _connection = new HubConnectionBuilder()
-             .WithUrl("http://localhost:5220/hub")
+             .WithUrl("http://localhost:8080/hub")
              .Build();
 
             Loaded += async (sender, e) => await ConnectToServer();
@@ -310,6 +311,15 @@ namespace WpfApp1
             _connection.On<int>("SetCoins", HandlePlayerCoins);
             _connection.On<int>("SetMoves", HandlePlayerMoves);
             _connection.On<int, int>("SetLeftShoots", HandleLeftShoots);
+            // _connection.On<int>("StartTurnTimer", StartUITimer);
+
+
+            _connection.On("TurnEnded", () =>
+            {
+                MessageBox.Show("Your turn has ended.");
+                SendMessageToClient("Your turn has ended.");
+                _uiTimer.Stop(); 
+            });
         }
 
         private void HandleLeftShoots(int id, int leftShoots)
@@ -504,6 +514,7 @@ namespace WpfApp1
         private void HandleOnReturnMove(MoveResult moveResult)
         {
             string message = moveResult.IsHit ? "You hit enemy ship!" + moveResult.X + " " + moveResult.Y : "You missed enemy ship!" + moveResult.X + " " + moveResult.Y;
+            
             SendMessageToClient(message);
             this.Dispatcher.Invoke(() =>
             {
@@ -602,7 +613,8 @@ namespace WpfApp1
         private void HandleOnPlayerTurn(string _)
         {
             UpdateState(new LocalplayerTurnState(new EnemyTurnState()));
-            SendMessageToClient("Your Turn!");
+            StartUITimer(30);
+            SendMessageToClient($"Your turn!");
             EnableEnemyBoard(true);
         }
 
@@ -955,6 +967,57 @@ namespace WpfApp1
             //{
             //    EnemyButtons[y, x + 1].Style = style;
             //}
+        }
+
+        private void UpdateTimerDisplay(int _timeLeft)
+        {
+            Timer_TimeLeft.Content = _timeLeft.ToString();
+        }
+
+        private void StartUITimer(int _timeLeft)
+        {
+            // Initial update to display the timer immediately
+            UpdateTimerDisplay(_timeLeft);
+
+            // Initialize the DispatcherTimer
+            _uiTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1) // Set interval for 1 second
+            };
+
+            // Define what happens on each timer tick
+            _uiTimer.Tick += (sender, args) =>
+            {
+                // Decrease the timer
+                _timeLeft--;
+
+                // Check if the timer has reached zero
+                if (_timeLeft <= 0)
+                {
+                    // Stop the timer and end the player's turn
+                    _uiTimer.Stop();
+                    EndPlayerTurn(); // This will trigger the end of the player's turn asynchronously
+                }
+                else
+                {
+                    // Update the timer display every second
+                    UpdateTimerDisplay(_timeLeft);
+                }
+            };
+
+            // Start the timer (this won't block the UI thread)
+            _uiTimer.Start();
+        }
+
+        private void EndPlayerTurn()
+        {
+            MessageBox.Show("Time's up! Turn ended.");
+            _uiTimer.Stop(); 
+        }
+
+        public void PlayerTurnFinished()
+        {
+            _uiTimer.Stop(); 
         }
 
         private void TestMode(object sender, RoutedEventArgs e)

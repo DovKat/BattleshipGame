@@ -7,6 +7,7 @@ using backend.Models.Entity.Ships;
 using backend.Models.Entity.Ships.Decorators;
 using backend.Models.Entity.Ships.Factory;
 using backend.Models.Entity.Ships.Generator;
+using backend.Singleton;
 using backend.Observer;
 using backend.Service;
 using Microsoft.AspNetCore.SignalR;
@@ -321,6 +322,7 @@ public class GameHub : Hub
         await Task.Delay(TimeSpan.FromSeconds(1)); // wait a second
 
         await Clients.Client(_currentGame.Player1.Id).SendAsync("YourTurn", "YourTurn"); // Player1 starts the game
+        await StartTimer(_currentGame.Player1.Id);
     }
 
 
@@ -384,6 +386,40 @@ public class GameHub : Hub
         var enemyPlayer = gameFacade.GetEnemyPlayer();
 
         await Clients.Client(enemyPlayer.Id).SendAsync("YourTurn", "YourTurn");
+        await StartTimer(enemyPlayer.Id);
+    }
+
+    public async Task StartTimer(string playerId)
+    {
+        IMessage debugger = new DebuggerMessages();
+
+
+        Trace.WriteLine($"Starting turn for player {playerId}");  // Try using Trace
+        TurnTimer.Instance.StartTimer(30, () => EndTimer(playerId));
+        
+        Console.WriteLine($"Starting turn for player {playerId}");
+        Console.Out.Flush();  // Ensure Console output is flushed
+
+        debugger.SendMessage($"Starting turn for player {playerId}");
+
+        // Send a debug message to frontend via SignalR
+        await Clients.All.SendAsync("ReceiveDebugMessage", $"Starting turn for player {playerId}");
+        
+
+        await Clients.Client(playerId).SendAsync("StartTurnTimer", 30);
+    }
+
+    private void EndTimer(string playerId)
+    {
+        IMessage debugger = new DebuggerMessages();
+        
+        Debug.WriteLine("Time's up! Passing turn to the next player.");
+        Console.WriteLine("Time's up! Passing turn to the next player.");
+        Console.Out.Flush();
+        debugger.SendMessage("Time's up! Passing turn to the next player.");
+        
+
+        Clients.Client(playerId).SendAsync("TurnEnded");
     }
 
     public async Task ShipsStats()

@@ -36,7 +36,7 @@ namespace WpfApp1
 
             InitializeUi();
             _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5220/testhub")
+            .WithUrl("http://localhost:8080/testhub")
             .Build();
             SetupConnection();
             

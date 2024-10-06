@@ -303,5 +303,7 @@
         <Image x:Name="PlayerIcon" Grid.Column="2" HorizontalAlignment="Left" Height="25" Margin="14,5,0,0" VerticalAlignment="Top" Width="25" Source="/0.png"/>
         <Label x:Name="Coins_MovesLeftLabel" Grid.Column="1" Content="Coins left:" HorizontalAlignment="Left" Margin="345,48,0,0" VerticalAlignment="Top"/>
         <Label x:Name="Coins_MovesLeft" Grid.Column="1" Content="0" HorizontalAlignment="Left" Margin="368,61,0,0" VerticalAlignment="Top"/>
+        <Label Name="Timer_TimeLeftLabel" Grid.Column="1"  Content="Time left:" HorizontalAlignment="Left" Margin="345,90,0,0" VerticalAlignment="Top" Foreground="Red"/>
+        <Label Name="Timer_TimeLeft" Grid.Column="1"  Content="0" HorizontalAlignment="Left" Margin="368,103,0,0" VerticalAlignment="Top" Foreground="Red"/>
     </Grid>
 </Window>
