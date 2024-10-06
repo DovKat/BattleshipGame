@@ -613,7 +613,7 @@ namespace WpfApp1
         private void HandleOnPlayerTurn(string _)
         {
             UpdateState(new LocalplayerTurnState(new EnemyTurnState()));
-            StartUITimer(30);
+            //StartUITimer(30);
             SendMessageToClient($"Your turn!");
             EnableEnemyBoard(true);
         }
