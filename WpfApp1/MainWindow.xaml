@@ -1,0 +1,307 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        x:Name="board"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        mc:Ignorable="d"
+        Title="Battleships" ResizeMode="CanMinimize" Height="400" Width="1008">
+    <Window.Background>
+        <SolidColorBrush Color="LightGray" />
+    </Window.Background>
+    <Window.Resources>
+        <Style x:Key="HitButton" TargetType="Button">
+            <Setter Property="Background" Value="red"/>
+            <Setter Property="Foreground" Value="black"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <ContentPresenter x:Name="MyContentPresenter" 
+                                          Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center" 
+                                          VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="PaleVioletRed"/>
+                    <Setter Property="Foreground" Value="black"/>
+                    <Setter Property="FontSize" Value="16"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NotHitButton" TargetType="Button">
+            <Setter Property="Background" Value="BurlyWood"/>
+            <Setter Property="Foreground" Value="black"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <ContentPresenter x:Name="MyContentPresenter" 
+                                          Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center" 
+                                          VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="BurlyWood"/>
+                    <Setter Property="Foreground" Value="black"/>
+                    <Setter Property="FontSize" Value="16"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HoveredButton" TargetType="Button">
+            <Setter Property="Background" Value="LightSalmon"/>
+            <Setter Property="Foreground" Value="black"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <ContentPresenter x:Name="MyContentPresenter" 
+                                          Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Center" 
+                                          VerticalAlignment="Center" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="LightSalmon"/>
+                    <Setter Property="Foreground" Value="black"/>
+                    <Setter Property="FontSize" Value="16"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="335*"/>
+            <ColumnDefinition Width="422*"/>
+            <ColumnDefinition Width="251"/>
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="MyBoard" HorizontalAlignment="Left" Width="300" Margin="20,10,0,25">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0" Grid.RowSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="#FF83FF97" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Grid.Column="0" Grid.ColumnSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="1,1" StartPoint="0,0.7">
+                        <GradientStop Color="#FF83FF97" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Label Content="A" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="B" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="C" Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="D" Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="E" Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="F" Grid.Column="6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="G" Grid.Column="7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="H" Grid.Column="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="I" Grid.Column="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="J" Grid.Column="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="1" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center"/>
+            <Label Content="2" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center"/>
+            <Label Content="3" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center"/>
+            <Label Content="4" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center"/>
+            <Label Content="5" HorizontalAlignment="Center" Grid.Row="5" VerticalAlignment="Center"/>
+            <Label Content="6" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center"/>
+            <Label Content="7" HorizontalAlignment="Center" Grid.Row="7" VerticalAlignment="Center"/>
+            <Label Content="8" HorizontalAlignment="Center" Grid.Row="8" VerticalAlignment="Center"/>
+            <Label Content="9" HorizontalAlignment="Center" Grid.Row="9" VerticalAlignment="Center"/>
+            <Label Content="10" HorizontalAlignment="Center" Grid.Row="10" VerticalAlignment="Center"/>
+        </Grid>
+        <ListBox x:Name="MessagesListbox" Grid.Column="2" Margin="14,34,11,0" RenderTransformOrigin="0.5,0.5" Height="80" VerticalAlignment="Top">
+            <ListBox.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                </Style>
+            </ListBox.Resources>
+            <ListBox.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform/>
+                    <SkewTransform AngleX="-0.181"/>
+                    <RotateTransform/>
+                    <TranslateTransform X="-0.568"/>
+                </TransformGroup>
+            </ListBox.RenderTransform>
+        </ListBox>
+        <Grid x:Name="EnemyBoard" HorizontalAlignment="Left" Width="300" Margin="40,10,0,25" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0" Grid.RowSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="#FF6961" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Grid.Column="0" Grid.ColumnSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="1,1" StartPoint="0,0.7">
+                        <GradientStop Color="#FF6961" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Label Content="A" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="B" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="C" Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="D" Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="E" Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="F" Grid.Column="6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="G" Grid.Column="7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="H" Grid.Column="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="I" Grid.Column="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="J" Grid.Column="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="1" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center"/>
+            <Label Content="2" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center"/>
+            <Label Content="3" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center"/>
+            <Label Content="4" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center"/>
+            <Label Content="5" HorizontalAlignment="Center" Grid.Row="5" VerticalAlignment="Center"/>
+            <Label Content="6" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center"/>
+            <Label Content="7" HorizontalAlignment="Center" Grid.Row="7" VerticalAlignment="Center"/>
+            <Label Content="8" HorizontalAlignment="Center" Grid.Row="8" VerticalAlignment="Center"/>
+            <Label Content="9" HorizontalAlignment="Center" Grid.Row="9" VerticalAlignment="Center"/>
+            <Label Content="10" HorizontalAlignment="Center" Grid.Row="10" VerticalAlignment="Center"/>
+        </Grid>
+        <Button x:Name="ActionButton" Content="Ready" Grid.Column="2" Margin="129,262,0,0" Click="HandleAction" IsEnabled="False" HorizontalAlignment="Left" Width="109" Height="25" VerticalAlignment="Top" Background="LightGreen">
+
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                </Style>
+            </Button.Resources>
+        </Button>
+        <TextBox x:Name="CommandInput" Grid.Column="2" HorizontalAlignment="Center" Height="19" Margin="0,207,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="225" KeyUp="CommandInput_KeyUp"/>
+        <Label x:Name="Histogram" Content="# - ship       X - ship hit       O - ship missed" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Bottom" Height="25" Width="236"/>
+        <Label x:Name="StateInfo" Grid.Column="1" HorizontalAlignment="Left" Margin="90,0,0,0" VerticalAlignment="Bottom" Height="25" Width="223"/>
+        <TextBlock x:Name="UserName" Grid.Column="2" HorizontalAlignment="Left" Margin="51,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="25" Width="190"><Run Language="lt-lt" Text="Username"/></TextBlock>
+        <ComboBox x:Name="ShipAttacksBox" Margin="14,231,0,0" Grid.Column="2" IsEnabled="False" HorizontalAlignment="Left" Width="109" Height="25" VerticalAlignment="Top"/>
+        <ComboBox x:Name="BombAttackBox" Margin="0,231,13,0" Grid.Column="2" IsEnabled="False" HorizontalAlignment="Right" Width="109" Height="25" VerticalAlignment="Top"/>
+        <Button x:Name="TestModeButton" Grid.Column="2" Content="Test Mode" Margin="14,292,128,0" IsEnabled="False" Click="TestMode" x:FieldModifier="public" RenderTransformOrigin="0.498,0.137" Height="25" VerticalAlignment="Top">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                </Style>
+            </Button.Resources>
+        </Button>
+        <Button x:Name="Undo" Grid.Column="2" Content="Undo" Margin="14,262,128,0" IsEnabled="False" Click="UndoAction" Height="25" VerticalAlignment="Top" Background="IndianRed">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                </Style>
+            </Button.Resources>
+        </Button>
+        <Button x:Name="RandomShips" Grid.Column="2" Content="Place random ships" Margin="0,292,13,0" IsEnabled="False" Click="PlaceRandomShipAction" HorizontalAlignment="Right" Width="109" Height="25" VerticalAlignment="Top">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                </Style>
+            </Button.Resources>
+        </Button>
+        <Button x:Name="Theme" Grid.Column="2" Margin="14,322,128,0" IsEnabled="True" Click="ThemeMode" x:FieldModifier="public" RenderTransformOrigin="0.498,0.137" Height="25" VerticalAlignment="Top">
+            <Button.Resources>
+                <Style TargetType="Border" >
+                    <Setter Property="CornerRadius" Value="10"></Setter>
+                    <Setter Property="BorderThickness" Value="2"></Setter>
+                </Style>
+            </Button.Resources>
+            <ListBox Height="3" Width="0" d:ItemsSource="{d:SampleData ItemCount=5}"/>
+        </Button>
+        <ListBox x:Name="MessagesListbox_ShipStats" Grid.Column="2" Margin="14,120,12,0" RenderTransformOrigin="0.5,0.5" Height="80" VerticalAlignment="Top">
+            <ListBox.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </ListBox.Resources>
+            <ListBox.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform/>
+                    <SkewTransform AngleX="-0.181"/>
+                    <RotateTransform/>
+                    <TranslateTransform X="-0.568"/>
+                </TransformGroup>
+            </ListBox.RenderTransform>
+        </ListBox>
+        <Canvas x:Name="MainCanvas" Background="Transparent" HorizontalAlignment="Left" Height="53" Margin="20,-10,0,0" VerticalAlignment="Top" Width="978" Grid.ColumnSpan="3"/>
+        <Button x:Name="ResetGame" Grid.Column="2" Content="Reset game" Margin="0,322,13,0" IsEnabled="False" Click="ResetGameAction" HorizontalAlignment="Right" Width="109" Height="25" VerticalAlignment="Top">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+        </Button>
+        <Image x:Name="PlayerIcon" Grid.Column="2" HorizontalAlignment="Left" Height="25" Margin="14,5,0,0" VerticalAlignment="Top" Width="25" Source="/0.png"/>
+        <Label x:Name="Coins_MovesLeftLabel" Grid.Column="1" Content="Coins left:" HorizontalAlignment="Left" Margin="345,48,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="Coins_MovesLeft" Grid.Column="1" Content="0" HorizontalAlignment="Left" Margin="368,61,0,0" VerticalAlignment="Top"/>
+    </Grid>
+</Window>
