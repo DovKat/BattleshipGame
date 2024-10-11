@@ -246,6 +246,8 @@ namespace WpfApp1
                 {
                     var myButton = CreateButton(true, x, y);
                     var enemyButton = CreateButton(false, x, y);
+                    var myButton2 = CreateButton(true, x, y); // For MyBoard2
+                    var enemyButton2 = CreateButton(false, x, y); // For EnemyBoard2
                     this.Dispatcher.Invoke(() =>
                     {
                         MyButtons[y, x] = myButton;
@@ -258,6 +260,15 @@ namespace WpfApp1
                         Grid.SetRow(enemyButton, y + 1);
                         Grid.SetColumn(enemyButton, x + 1);
                         EnemyBoard.Children.Add(enemyButton);
+
+                         // Second set of buttons (for MyBoard2 and EnemyBoard2)
+                        Grid.SetRow(myButton2, y + 1);
+                        Grid.SetColumn(myButton2, x + 1);
+                        MyBoard2.Children.Add(myButton2); // Add to MyBoard2
+
+                        Grid.SetRow(enemyButton2, y + 1);
+                        Grid.SetColumn(enemyButton2, x + 1);
+                        EnemyBoard2.Children.Add(enemyButton2); // Add to EnemyBoard2
                     });
                 }
             }
@@ -613,7 +624,7 @@ namespace WpfApp1
         private void HandleOnPlayerTurn(string _)
         {
             UpdateState(new LocalplayerTurnState(new EnemyTurnState()));
-            StartUITimer(30);
+            //StartUITimer(30);
             SendMessageToClient($"Your turn!");
             EnableEnemyBoard(true);
         }

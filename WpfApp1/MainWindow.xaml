@@ -6,7 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="Battleships" ResizeMode="CanMinimize" Height="400" Width="1008">
+        Title="Battleships" ResizeMode="CanMinimize" Height="900" Width="1008">
     <Window.Background>
         <SolidColorBrush Color="LightGray" />
     </Window.Background>
@@ -90,7 +90,71 @@
             <ColumnDefinition Width="422*"/>
             <ColumnDefinition Width="251"/>
         </Grid.ColumnDefinitions>
-        <Grid x:Name="MyBoard" HorizontalAlignment="Left" Width="300" Margin="20,10,0,25">
+        <Grid x:Name="MyBoard" HorizontalAlignment="Left" Width="300" Height="300" Margin="20,-400,0,25">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0" Grid.RowSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="#FF83FF97" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Grid.Column="0" Grid.ColumnSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="1,1" StartPoint="0,0.7">
+                        <GradientStop Color="#FF83FF97" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Label Content="A" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="B" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="C" Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="D" Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="E" Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="F" Grid.Column="6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="G" Grid.Column="7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="H" Grid.Column="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="I" Grid.Column="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="J" Grid.Column="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="1" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center"/>
+            <Label Content="2" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center"/>
+            <Label Content="3" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center"/>
+            <Label Content="4" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center"/>
+            <Label Content="5" HorizontalAlignment="Center" Grid.Row="5" VerticalAlignment="Center"/>
+            <Label Content="6" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center"/>
+            <Label Content="7" HorizontalAlignment="Center" Grid.Row="7" VerticalAlignment="Center"/>
+            <Label Content="8" HorizontalAlignment="Center" Grid.Row="8" VerticalAlignment="Center"/>
+            <Label Content="9" HorizontalAlignment="Center" Grid.Row="9" VerticalAlignment="Center"/>
+            <Label Content="10" HorizontalAlignment="Center" Grid.Row="10" VerticalAlignment="Center"/>
+        </Grid>
+        <Grid x:Name="MyBoard2" HorizontalAlignment="Left" Width="300" Height="300" Margin="20,400,0,25">
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
@@ -169,7 +233,71 @@
                 </TransformGroup>
             </ListBox.RenderTransform>
         </ListBox>
-        <Grid x:Name="EnemyBoard" HorizontalAlignment="Left" Width="300" Margin="40,10,0,25" Grid.Column="1">
+        <Grid x:Name="EnemyBoard" HorizontalAlignment="Left" Width="300" Height="300" Margin="40,-400,0,25" Grid.Row="0" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Rectangle Grid.Column="0" Grid.RowSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                        <GradientStop Color="#FF6961" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Rectangle Grid.Column="0" Grid.ColumnSpan="1000">
+                <Rectangle.Fill>
+                    <LinearGradientBrush EndPoint="1,1" StartPoint="0,0.7">
+                        <GradientStop Color="#FF6961" Offset="0" />
+                        <GradientStop Color="White" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Label Content="A" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="B" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="C" Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="D" Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="E" Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="F" Grid.Column="6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="G" Grid.Column="7" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="H" Grid.Column="8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="I" Grid.Column="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="J" Grid.Column="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Label Content="1" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center"/>
+            <Label Content="2" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center"/>
+            <Label Content="3" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center"/>
+            <Label Content="4" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center"/>
+            <Label Content="5" HorizontalAlignment="Center" Grid.Row="5" VerticalAlignment="Center"/>
+            <Label Content="6" HorizontalAlignment="Center" Grid.Row="6" VerticalAlignment="Center"/>
+            <Label Content="7" HorizontalAlignment="Center" Grid.Row="7" VerticalAlignment="Center"/>
+            <Label Content="8" HorizontalAlignment="Center" Grid.Row="8" VerticalAlignment="Center"/>
+            <Label Content="9" HorizontalAlignment="Center" Grid.Row="9" VerticalAlignment="Center"/>
+            <Label Content="10" HorizontalAlignment="Center" Grid.Row="10" VerticalAlignment="Center"/>
+        </Grid>
+        <Grid x:Name="EnemyBoard2" HorizontalAlignment="Left" Width="300" Height="300" Margin="40,400,0,25" Grid.Row="0" Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
