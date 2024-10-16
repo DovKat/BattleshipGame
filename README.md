@@ -77,3 +77,6 @@ Komandos nariai:
 
 7. Sąsajos naudojimas:
    - Vartotojo sąsaja turi būti aiški ir lengvai suprantama, leidžiant žaidėjams patogiai sąveikauti su sistema.
+8. Paleidimas:
+   - docker build -t shipgame .
+   - docker run -p 8080:80 -t shipgame
