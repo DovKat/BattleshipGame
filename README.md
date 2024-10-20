@@ -80,3 +80,6 @@ Komandos nariai:
 8. Paleidimas:
    - docker build -t shipgame .
    - docker run -p 8080:80 -t shipgame
+
+   Klientui paleisti:
+   - dotnet run --project WpfApp1/WpfApp1.csproj
