@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("battleship-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d2197d98a0cd4ce26f4081ceed1a3405cd6c8c80")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c337aa36176fccf5dbc19ff247f86c73bb7a6bf0")]
 [assembly: System.Reflection.AssemblyProductAttribute("battleship-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("battleship-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
