@@ -6,18 +6,45 @@ using System.Text.Json;
 using Newtonsoft.Json;
 
 
-
-public class GameHub : Hub
+public class GameHub : Hub, IGameObserver
 {
+    private readonly ILogger<GameHub> _logger;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
+    public GameHub(ILogger<GameHub> logger)
+    {
+        _logger = logger;
+    }
+    public async Task Update(Game game, string messageType, object data)
+    {
+        switch (messageType)
+        {
+            case "PlayerJoined":
+                var player = (Player)data;
+                await Clients.Group(game.GameId).SendAsync("PlayerJoined", player);
+                break;
+            case "UpdateTeams":
+                var teams = (List<Team>)data;
+                await Clients.Group(game.GameId).SendAsync("UpdateTeams", teams);
+                break;
+            case "GameStarted":
+                await Clients.Group(game.GameId).SendAsync("GameStarted", game);
+                break;
+            case "UpdateGameState":
+                await Clients.Group(game.GameId).SendAsync("UpdateGameState", game);
+                break;
+            // Add more cases as needed for different notifications
+        }
+    }
+
 
     public async Task JoinTeam(string gameId, string team, string playerName, string playerId)
     {
         try
         {
             Console.WriteLine($"JoinTeam called with gameId: {gameId}, team: {team}, playerName: {playerName}, playerId: {playerId}");
-
+            
             var game = _games.GetValueOrDefault(gameId) ?? CreateNewGame(gameId);
+            game.AddObserver(this);
 
             var playerTeam = game.Teams.FirstOrDefault(t => t.Name.Equals(team, StringComparison.OrdinalIgnoreCase));
             if (playerTeam == null)
@@ -28,6 +55,8 @@ public class GameHub : Hub
 
             if (playerTeam.Players.Count < 2)
             {
+                
+                
                 var player = new Player
                 {
                     Id = playerId,
@@ -43,8 +72,11 @@ public class GameHub : Hub
                 _games[gameId] = game;
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, gameId); // Add player to the game-specific group
-                await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams); // Update only players in this game
-                await Clients.Group(gameId).SendAsync("PlayerJoined", player);
+                
+                game.PlayerJoined(player);
+                
+                //await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams); // Update only players in this game
+               // await Clients.Group(gameId).SendAsync("PlayerJoined", player);
 
                 await CheckStartGame(game);
             }
@@ -55,7 +87,7 @@ public class GameHub : Hub
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in JoinTeam: {ex.Message}");
+            _logger.LogError(ex, "Error in JoinTeam: {Message}", ex.Message);
             await Clients.Caller.SendAsync("JoinTeamFailed", "An error occurred while joining the team.");
         }
     }
@@ -92,7 +124,6 @@ public class GameHub : Hub
             game.State = "InProgress";
             game.CurrentTurn = "Red";  // Assuming Red team starts
             game.CurrentPlayerIndex = 0;
-
             // Send the initial state of each player's board to them
             foreach (var team in game.Teams)
             {
@@ -276,8 +307,14 @@ public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoord
         if (playerToRemove != null)
         {
             var game = _games.Values.First(g => g.Teams.Any(t => t.Players.Contains(playerToRemove)));
+            
+            if (game != null)
+            {
+                game.RemoveObserver(this);
+            }
+            
             var team = game.Teams.First(t => t.Name == playerToRemove.Team);
-
+            
             team.Players.Remove(playerToRemove);
             game.Players.Remove(playerToRemove.Id);
 
@@ -286,7 +323,6 @@ public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoord
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, game.GameId);
         }
-
         await base.OnDisconnectedAsync(exception);
     }
 

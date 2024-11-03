@@ -12,4 +12,29 @@ public class Game
         Teams = new List<Team>();
         Players = new Dictionary<string, Player>();
     }
+    private readonly List<IGameObserver> _observers = new List<IGameObserver>();
+
+    public void AddObserver(IGameObserver observer)
+    {
+        _observers.Add(observer);
+    }
+
+    public void RemoveObserver(IGameObserver observer)
+    {
+        _observers.Remove(observer);
+    }
+
+    public void NotifyObservers(string messageType, object data)
+    {
+        foreach (var observer in _observers)
+        {
+            observer.Update(this, messageType, data);
+        }
+    }
+    
+    public void PlayerJoined(Player player)
+    {
+        NotifyObservers("PlayerJoined", player);
+        NotifyObservers("UpdateTeams", Teams);
+    }
 }
