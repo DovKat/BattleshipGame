@@ -15,6 +15,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const [isCurrentTurn, setIsCurrentTurn] = useState(false);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [game, setGame] = useState<EGame | null>(null);
+    const [scores, setScores] = useState<{ [key: string]: number }>({});
 
     const { connection } = useContext(SignalRContext)!;
 
@@ -39,14 +40,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         });
 
         // Handle MoveResult event to manage player's turn
-        connection?.on("MoveResult", ({ PlayerId, Row, Col, Result }) => {
+        connection?.on("MoveResult", (PlayerId, Row, Col, Result) => {
             console.log(`${PlayerId} shot at (${Row}, ${Col}): ${Result}`);
+        });
+
+        // Handle ReceiveUpdatedScore event to display player's score
+        connection?.on("ReceiveUpdatedScore", (playerId: string, score: number) => {
+            setScores(prevScores => ({
+                ...prevScores,
+                [playerId]: score
+            }));
         });
 
         return () => {
             connection?.off("GameStarted");
             connection?.off("UpdateGameState");
             connection?.off("MoveResult");
+            connection?.off("ReceiveUpdatedScore");
         };
     }, [connection, currentTeam]);
 
@@ -85,7 +95,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         <div className="game-board-container">
             <h2>Game Board</h2>
             {gameStarted && <p>The game has started!</p>}
-            {isCurrentTurn && <p>It's your turn!</p>}
+                    {isCurrentTurn ? (
+            <p>It's your turn!</p>
+        ) : (
+            <p>Waiting for {game?.currentTurn} to play...</p> // Display other team's turn
+        )}
             <div className="boards-container">
                 {/* Row for current player and their teammate */}
                 <div className="board-row">
@@ -104,13 +118,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                         playerName={currentPlayer.name}
                                         playerId={currentPlayer.id}
                                         gameId="game-1"
+                                        score={scores[currentPlayer.id] || 0}
                                     />
                                 )}
                             </div>
 
                             {/* Teammate's Board */}
                             {teammate && (
-                                <div key={teammate.id} className={`board-wrapper player-board`}>
+                                <div key={teammate.id} className={`board-wrapper teammate-board`}>
                                     <div className="board-title">{teammate.name}'s Board</div>
                                     {teammate.board && (
                                         <Board
@@ -122,6 +137,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                             playerName={teammate.name}
                                             playerId={teammate.id}
                                             gameId="game-1"
+                                            score={scores[teammate.id] || 0}
                                         />
                                     )}
                                 </div>
@@ -135,6 +151,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                     {players.map((player) => {
                         const isOpponentBoard = player.team !== currentTeam;
                         const board = getPlayerBoard(player.id) || player.board;
+                        const score = scores[player.id] || 0;
 
                         return (
                             isOpponentBoard && (
@@ -150,6 +167,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                             playerName={player.name}
                                             playerId={player.id}
                                             gameId="game-1"
+                                            score={score}
                                         />
                                     )}
                                 </div>

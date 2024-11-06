@@ -12,6 +12,7 @@ interface BoardProps {
     playerName: string; // Player's name to display on the board
     playerId: string; // Player's ID for SignalR
     gameId: string; // Game ID to identify the current game session
+    score?: number //the score for that player
 }
 
 const Board: React.FC<BoardProps> = ({
@@ -23,6 +24,7 @@ const Board: React.FC<BoardProps> = ({
     playerName,
     playerId,
     gameId,
+    score
 }) => {
     const [localBoard, setLocalBoard] = useState<Cell[][]>(board);
     const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
@@ -144,6 +146,7 @@ const Board: React.FC<BoardProps> = ({
                 </div>
             )}
             <h3>{playerName}'s Board {isTeammateBoard && "(Teammate)"}</h3>
+            <p>Score: {score}</p> {/* Display the score here */}
             <div
                 className="board-grid"
                 style={{

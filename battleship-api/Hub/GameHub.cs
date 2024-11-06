@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Newtonsoft.Json;
+using backend.GameManager;
 
 
 public class GameHub : Hub, IGameObserver
@@ -209,6 +210,32 @@ public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoord
         }
     }
 
+    public async Task UpdatePlayerScore(string playerID, string hitResult, string gameId)
+    {
+        int playerScore = GameManager.Instance.GetPlayerScore(playerID);
+        int points = 0;
+
+        if (hitResult == "Hit")
+        {
+            points = 50;
+        }
+        else if (hitResult == "Sunk")
+        {
+            points = 100;
+        }
+
+        GameManager.Instance.UpdatePlayerScore(playerID, points);
+
+        // Send each property separately
+        await Clients.Group(gameId).SendAsync("ReceiveUpdatedScore", 
+            playerID, 
+            GameManager.Instance.GetPlayerScore(playerID), 
+            points, 
+            hitResult);
+
+        Console.WriteLine($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
+    }
+
     public async Task MakeMove(string gameId, string playerId, int row, int col)
 {
     if (_games.TryGetValue(gameId, out var game))
@@ -231,6 +258,7 @@ public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoord
 
         var opponentTeam = game.Teams.First(t => t.Name != player.Team);
         var hitResult = ProcessMove(opponentTeam, row, col);
+        var points = UpdatePlayerScore(playerId, hitResult, gameId);
 
         Console.WriteLine($"Move made by {playerId} at ({row}, {col}): {hitResult}");
         await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });
@@ -275,18 +303,20 @@ public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoord
         return "Miss";
     }
 
-    private void AdvanceTurn(Game game)
-{
-    var currentTeam = game.Teams.First(t => t.Name == game.CurrentTurn);
-    game.CurrentPlayerIndex = (game.CurrentPlayerIndex + 1) % currentTeam.Players.Count;
-
-    if (game.CurrentPlayerIndex == 0) // After each player in the team has taken a turn, switch teams
+    private async void AdvanceTurn(Game game)
     {
-        game.CurrentTurn = game.CurrentTurn == "Red" ? "Blue" : "Red";
-    }
+        var currentTeam = game.Teams.First(t => t.Name == game.CurrentTurn);
+        game.CurrentPlayerIndex = (game.CurrentPlayerIndex + 1) % currentTeam.Players.Count;
 
-    Console.WriteLine($"Advanced turn: {game.CurrentTurn}, Current Player Index: {game.CurrentPlayerIndex}");
-}
+        if (game.CurrentPlayerIndex == 0) // After each player in the team has taken a turn, switch teams
+        {
+            game.CurrentTurn = game.CurrentTurn == "Red" ? "Blue" : "Red";
+        }
+
+        await Clients.Group(game.GameId).SendAsync("UpdateGameState", new { game.CurrentTurn, game.CurrentPlayerIndex });
+
+        Console.WriteLine($"Advanced turn: {game.CurrentTurn}, Current Player Index: {game.CurrentPlayerIndex}");
+    }
 
 
 

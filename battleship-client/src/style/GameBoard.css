@@ -71,7 +71,11 @@ h2 {
     background-color: #cc0000;
 }
 
-.player-board, .teammate-board {
+.player-board{
+    background-color: #cdf0d0; 
+}
+
+.teammate-board{
     background-color: #e8f5e9; 
 }
 
