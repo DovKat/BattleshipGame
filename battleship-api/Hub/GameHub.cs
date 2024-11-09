@@ -8,6 +8,7 @@ using backend.GameManager;
 using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
+using battleship_api.Builder;
 
 
 public class GameHub : Hub, IGameObserver
@@ -97,23 +98,33 @@ public class GameHub : Hub, IGameObserver
     }
 
     // Method to create a new game
-    private Game CreateNewGame(string gameId)
+    public Game CreateNewGame(string gameId)
     {
-        var newGame = new Game
+        // Use StandardGameBuilder or another builder based on the scenario
+        var gameBuilder = new StandardGameBuilder();
+        gameBuilder.SetGameId(gameId);
+        gameBuilder.SetTeams(new List<Team>
         {
-            GameId = gameId,
-            Teams = new List<Team>
-            {
-                new Team { Name = "Red", Players = new List<Player>() },
-                new Team { Name = "Blue", Players = new List<Player>() }
-            },
-            State = "Waiting",
-            Players = new Dictionary<string, Player>()
-        };
-        _games[gameId] = newGame; // Store the new game
-        return newGame;
+            new() { Name = "Red", Players = new List<Player>() },
+            new() { Name = "Blue", Players = new List<Player>() }
+        });
+        gameBuilder.SetState("Waiting");
+
+        var game = gameBuilder.Build();
+        _games[gameId] = game;
+        return game;
     }
-    
+    public Player CreateNewPlayer(string playerId, string playerName, string team, Board board, bool isAI = false)
+    {
+        // Select builder type based on whether the player is an AI or a human
+        IPlayerBuilder playerBuilder = isAI ? new AIPlayerBuilder() : new StandardPlayerBuilder();
+        playerBuilder.SetPlayerId(playerId);
+        playerBuilder.SetPlayerName(playerName);
+        playerBuilder.SetTeam(team);
+        playerBuilder.SetBoard(board);
+
+        return playerBuilder.Build();
+    }
     public async Task SetPlayerReady(string gameId, string playerId)
     {
         Console.WriteLine($"SetPlayerReady called with GameId: {gameId}, PlayerId: {playerId}");
