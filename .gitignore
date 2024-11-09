@@ -62,3 +62,4 @@ packages/
 # Ignore publish output
 publish/
 *.publishsettings
+/battleship-api/bin

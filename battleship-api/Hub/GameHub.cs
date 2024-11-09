@@ -113,127 +113,123 @@ public class GameHub : Hub, IGameObserver
         _games[gameId] = newGame; // Store the new game
         return newGame;
     }
+    
     public async Task SetPlayerReady(string gameId, string playerId)
-{
-    Console.WriteLine($"SetPlayerReady called with GameId: {gameId}, PlayerId: {playerId}");
-
-    if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
     {
-        player.IsReady = true;
-        await Clients.Group(gameId).SendAsync("PlayerReady", playerId);
+        Console.WriteLine($"SetPlayerReady called with GameId: {gameId}, PlayerId: {playerId}");
 
-        // Check if all players in both teams are ready
-        if (game.Teams.All(t => t.Players.All(p => p.IsReady)))
+        if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
         {
-            game.State = "InProgress";
-            game.CurrentTurn = "Red";  // Assuming Red team starts
-            game.CurrentPlayerIndex = 0;
-            // Send the initial state of each player's board to them
-            foreach (var team in game.Teams)
+            player.IsReady = true;
+        
+            await Clients.Group(gameId).SendAsync("PlayerReady", playerId);
+            game.NotifyObservers("PlayerReady", playerId);  // Notify observers about the player ready status
+
+            if (game.Teams.All(t => t.Players.All(p => p.IsReady)))
             {
-                foreach (var p in team.Players)
+                game.State = "InProgress";
+                game.CurrentTurn = "Red";  // Assuming Red team starts
+                game.CurrentPlayerIndex = 0;
+
+                foreach (var team in game.Teams)
                 {
-                    await Clients.Client(p.Id).SendAsync("GameStarted", p.Board);  // Each player receives their own board
+                    foreach (var p in team.Players)
+                    {
+                        await Clients.Client(p.Id).SendAsync("GameStarted", p.Board);
+                    }
                 }
+
+                await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+                game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
+            }
+        }
+    }
+
+
+    public async Task PlaceShip(string gameId, string playerId, string shipType, int row, int col, string orientation)
+    {
+        if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
+        {
+            ShipFactory _shipFactory = new ShipFactory();
+            var newShip = _shipFactory.CreateShip(shipType);
+            newShip.Orientation = orientation;
+            newShip.isPlaced = true;
+
+            Coordinate startCoordinate = new Coordinate { Row = row, Column = col };
+            var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
+
+            if (!IsPlacementValid(player.Board, shipCoordinates))
+            {
+                await Clients.Caller.SendAsync("ShipPlacementFailed", "Invalid ship placement.");
+                return;
             }
 
-            await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all players the game is starting
-            await CheckStartGame(game);
+            newShip.Coordinates = shipCoordinates;
+            newShip.isPlaced = true;
+            player.Board.Ships.Add(newShip);
+
+            foreach (var coord in shipCoordinates)
+            {
+                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+            }
+
+            await Clients.Caller.SendAsync("ShipPlaced", player.Board);
+            await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+            game.NotifyObservers("ShipPlaced", new { PlayerId = playerId, Board = player.Board });  // Notify observers of the ship placement
+        } 
+        else 
+        {
+            await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
         }
     }
-}
 
-
-
-public async Task PlaceShip(string gameId, string playerId, string shipType, int row, int col, string orientation)
-{
-    if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
+    private List<Coordinate> CalculateShipCoordinates(Coordinate start, int length, string orientation)
     {
-        ShipFactory _shipFactory = new ShipFactory();
-        var newShip = _shipFactory.CreateShip(shipType);
-        newShip.Orientation = orientation;
-        newShip.isPlaced = true;
+        var coordinates = new List<Coordinate>();
 
-        Console.WriteLine("ship start coordinate:(" + row + ";" + col + ")");
-        Coordinate startCoordinate = new Coordinate { Row = row, Column = col };
-        var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
-
-        if (!IsPlacementValid(player.Board, shipCoordinates))
+        for (int i = 0; i < length; i++)
         {
-            await Clients.Caller.SendAsync("ShipPlacementFailed", "Invalid ship placement.");
-            return;
+            int row = orientation == "horizontal" ? start.Row : start.Row + i;
+            int col = orientation == "horizontal" ? start.Column + i : start.Column;
+            coordinates.Add(new Coordinate { Row = row, Column = col });
         }
 
-        //Validation passed, place ship on board
-        newShip.Coordinates = shipCoordinates;
-        newShip.isPlaced = true;
-        player.Board.Ships.Add(newShip);
-
-        foreach (var coord in shipCoordinates)
-        {
-            player.Board.Grid[coord.Row][coord.Column].HasShip = true;
-        }
-        
-        Console.WriteLine("New ship placed on players board");
-
-        await Clients.Caller.SendAsync("ShipPlaced", player.Board); // Send updated board to player
-        await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all clients in the group of the update
-    } else {
-        await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
+        return coordinates;
     }
-}
 
-private List<Coordinate> CalculateShipCoordinates(Coordinate start, int length, string orientation)
-{
-    var coordinates = new List<Coordinate>();
-
-    for (int i = 0; i < length; i++)
+    private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
-        int row = orientation == "horizontal" ? start.Row : start.Row + i;
-        int col = orientation == "horizontal" ? start.Column + i : start.Column;
-        coordinates.Add(new Coordinate { Row = row, Column = col });
-    }
-
-    return coordinates;
-}
-
-private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
-{
-    foreach (var coord in coordinates)
-    {
-        // Check bounds
-        if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
-            coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+        foreach (var coord in coordinates)
         {
-            return false;
-        }
+            // Check bounds
+            if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
+                coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+            {
+                return false;
+            }
 
-        // Check for overlap
-        if (board.Grid[coord.Row][coord.Column].HasShip)
-        {
-            return false;
+            // Check for overlap
+            if (board.Grid[coord.Row][coord.Column].HasShip)
+            {
+                return false;
+            }
         }
+        return true;
     }
-    return true;
-}
 
     // Method to check if the game can start
-private async Task CheckStartGame(Game game)
-{
-    Console.WriteLine($"Checking if game {game.GameId} can start...");
-    if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
+    private async Task CheckStartGame(Game game)
     {
-        game.State = "InProgress";
-        game.CurrentTurn = "Red";
-        game.CurrentPlayerIndex = 0;
-        Console.WriteLine($"Game started: {game.GameId} with initial turn: {game.CurrentTurn}");
-        await Clients.Group(game.GameId).SendAsync("GameStarted", game);
+        Console.WriteLine($"Checking if game {game.GameId} can start...");
+        if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
+        {
+            game.State = "InProgress";
+            game.CurrentTurn = "Red";
+            game.CurrentPlayerIndex = 0;
+            await Clients.Group(game.GameId).SendAsync("GameStarted", game);
+            game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
+        }
     }
-    else
-    {
-        Console.WriteLine("Game cannot start: Not all players are ready or teams do not have required players.");
-    }
-}
 
 
     // Method to handle player moves
@@ -286,46 +282,44 @@ private async Task CheckStartGame(Game game)
     }
 
     public async Task MakeMove(string gameId, string playerId, int row, int col)
-{
-    if (_games.TryGetValue(gameId, out var game))
     {
-        var player = game.Players.GetValueOrDefault(playerId);
-        if (player == null || game.State != "InProgress" || game.CurrentTurn != player.Team)
+        if (_games.TryGetValue(gameId, out var game))
         {
-            Console.WriteLine($"Move not allowed: PlayerId: {playerId}, CurrentTurn: {game.CurrentTurn}, Team: {player?.Team}, State: {game.State}");
-            await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
-            return;
-        }
+            var player = game.Players.GetValueOrDefault(playerId);
+            if (player == null || game.State != "InProgress" || game.CurrentTurn != player.Team)
+            {
+                await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
+                return;
+            }
 
-        // Check if it's the player's turn within their team
-        var team = game.Teams.First(t => t.Name == player.Team);
-        if (team.Players[game.CurrentPlayerIndex].Id != playerId)
-        {
-            await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
-            return;
-        }
+            var team = game.Teams.First(t => t.Name == player.Team);
+            if (team.Players[game.CurrentPlayerIndex].Id != playerId)
+            {
+                await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
+                return;
+            }
 
-        var opponentTeam = game.Teams.First(t => t.Name != player.Team);
-        var hitResult = ProcessMove(opponentTeam, row, col);
-        var points = UpdatePlayerScore(playerId, hitResult, gameId);
+            var opponentTeam = game.Teams.First(t => t.Name != player.Team);
+            var hitResult = ProcessMove(opponentTeam, row, col);
+            var points = UpdatePlayerScore(playerId, hitResult, gameId);
 
-        Console.WriteLine($"Move made by {playerId} at ({row}, {col}): {hitResult}");
-        await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });
+            await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });
+            game.NotifyObservers("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });  // Notify observers of the move result
 
-        // Check if the opponent team lost all ships
-        if (opponentTeam.Players.All(p => p.Board.Ships.All(s => s.IsSunk)))
-        {
-            game.State = "Ended";
-            await Clients.Group(gameId).SendAsync("GameEnded", $"{player.Team} team wins!");
-            Console.WriteLine($"Game ended: {player.Team} team wins!");
-        }
-        else
-        {
-            AdvanceTurn(game);  // Advance to the next player's turn
-            await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+            if (opponentTeam.Players.All(p => p.Board.Ships.All(s => s.IsSunk)))
+            {
+                game.State = "Ended";
+                await Clients.Group(game.GameId).SendAsync("GameEnded", $"{player.Team} team wins!");
+                game.NotifyObservers("GameEnded", $"{player.Team} team wins!");  // Notify observers about game end
+            }
+            else
+            {
+                AdvanceTurn(game);
+                await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+                game.NotifyObservers("UpdateGameState", game);  // Notify observers of the updated game state
+            }
         }
     }
-}
 
 
 
