@@ -13,6 +13,7 @@ interface BoardProps {
     playerId: string; // Player's ID for SignalR
     gameId: string; // Game ID to identify the current game session
     score?: number //the score for that player
+    team?: string //color of the team
 }
 
 const Board: React.FC<BoardProps> = ({
@@ -24,7 +25,8 @@ const Board: React.FC<BoardProps> = ({
     playerName,
     playerId,
     gameId,
-    score
+    score,
+    team
 }) => {
     const [localBoard, setLocalBoard] = useState<Cell[][]>(board);
     const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
@@ -117,7 +119,7 @@ const Board: React.FC<BoardProps> = ({
                 style={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${localBoard[0].length}, 30px)`,
-                    gap: '2px'
+                    gap: '2px',
                 }}
             >
                 {localBoard.map((row, rowIndex) =>

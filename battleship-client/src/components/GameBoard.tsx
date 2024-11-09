@@ -89,6 +89,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         return null; 
     };
 
+    const getTeamColor = (teamName: string) => {
+        return teamName === "Red" ? "#de6f81" : "#6377f7";
+    };
+
     const teammate = currentPlayerId ? getTeammate(currentPlayerId) : null;
 
     return (
@@ -101,12 +105,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
             <p>Waiting for {game?.currentTurn} to play...</p> // Display other team's turn
         )}
             <div className="boards-container">
-                {/* Row for current player and their teammate */}
                 <div className="board-row">
                     {currentPlayer && (
                         <>
                             {/* Current Player's Board */}
-                            <div key={currentPlayer.id} className={`board-wrapper player-board`}>
+                            <div key={currentPlayer.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
                                 <div className="board-title">{currentPlayer.name}'s Board</div>
                                 {currentPlayer.board && (
                                     <Board
@@ -119,13 +122,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                         playerId={currentPlayer.id}
                                         gameId="game-1"
                                         score={scores[currentPlayer.id] || 0}
+                                        team={getTeamColor(currentPlayer.team)}
                                     />
                                 )}
                             </div>
 
                             {/* Teammate's Board */}
                             {teammate && (
-                                <div key={teammate.id} className={`board-wrapper teammate-board`}>
+                                <div key={teammate.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(teammate.team)}}>
                                     <div className="board-title">{teammate.name}'s Board</div>
                                     {teammate.board && (
                                         <Board
@@ -138,6 +142,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                             playerId={teammate.id}
                                             gameId="game-1"
                                             score={scores[teammate.id] || 0}
+                                            team={getTeamColor(teammate.team)}
                                         />
                                     )}
                                 </div>
@@ -155,7 +160,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
 
                         return (
                             isOpponentBoard && (
-                                <div key={player.id} className={`board-wrapper opponent-board`}>
+                                <div key={player.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(player.team)}}>
                                     <div className="board-title">{player.name}'s Board</div>
                                     {board && (
                                         <Board
@@ -168,6 +173,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                             playerId={player.id}
                                             gameId="game-1"
                                             score={score}
+                                            team={getTeamColor(player.team)}
                                         />
                                     )}
                                 </div>
