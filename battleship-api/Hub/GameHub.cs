@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using Newtonsoft.Json;
 using backend.GameManager;
+using backend.ShipFactory;
+using System.Data;
+using System.ComponentModel.DataAnnotations.Schema;
 
 
 public class GameHub : Hub, IGameObserver
@@ -142,34 +145,80 @@ public class GameHub : Hub, IGameObserver
 
 
 
-public async Task PlaceShip(string gameId, string playerId, List<Ship> shipCoordinates)
+public async Task PlaceShip(string gameId, string playerId, string shipType, int row, int col, string orientation)
 {
     if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
     {
-        player.Board.Ships.Clear();
-        
+        ShipFactory _shipFactory = new ShipFactory();
+        var newShip = _shipFactory.CreateShip(shipType);
+        newShip.Orientation = orientation;
+        newShip.isPlaced = true;
 
-       
-        
-        Console.WriteLine("NICE");
-        // If all checks pass, place the ships
-        
-        foreach (var ship in shipCoordinates)
-        {   
-            Ship newShip = ship;
-            player.Board.Ships.Add(newShip);
-            foreach (var coord in ship.Coordinates)
-            {
-                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
-            }
+        Console.WriteLine("ship start coordinate:(" + row + ";" + col + ")");
+        Coordinate startCoordinate = new Coordinate { Row = row, Column = col };
+        var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
+
+        if (!IsPlacementValid(player.Board, shipCoordinates))
+        {
+            await Clients.Caller.SendAsync("ShipPlacementFailed", "Invalid ship placement.");
+            return;
         }
+
+        //Validation passed, place ship on board
+        newShip.Coordinates = shipCoordinates;
+        newShip.isPlaced = true;
+        player.Board.Ships.Add(newShip);
+
+        foreach (var coord in shipCoordinates)
+        {
+            player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+        }
+        
+        Console.WriteLine("New ship placed on players board");
+
         await Clients.Caller.SendAsync("ShipPlaced", player.Board); // Send updated board to player
         await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all clients in the group of the update
+    } else {
+        await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
     }
 }
 
+private List<Coordinate> CalculateShipCoordinates(Coordinate start, int length, string orientation)
+{
+    var coordinates = new List<Coordinate>();
+
+    for (int i = 0; i < length; i++)
+    {
+        int row = orientation == "horizontal" ? start.Row : start.Row + i;
+        int col = orientation == "horizontal" ? start.Column + i : start.Column;
+        coordinates.Add(new Coordinate { Row = row, Column = col });
+    }
+
+    return coordinates;
+}
+
+private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
+{
+    foreach (var coord in coordinates)
+    {
+        // Check bounds
+        if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
+            coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+        {
+            return false;
+        }
+
+        // Check for overlap
+        if (board.Grid[coord.Row][coord.Column].HasShip)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
     // Method to check if the game can start
-    private async Task CheckStartGame(Game game)
+private async Task CheckStartGame(Game game)
 {
     Console.WriteLine($"Checking if game {game.GameId} can start...");
     if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))

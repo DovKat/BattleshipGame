@@ -38,56 +38,41 @@ const Board: React.FC<BoardProps> = ({
     const [placedShips, setPlacedShips] = useState<Ship[]>([]);
     const { setPlayerReady } = useContext(SignalRContext)!;
     const { connection } = useContext(SignalRContext)!;
+
     useEffect(() => {
         setLocalBoard(board);
     }, [board]);
 
-    const canPlaceShip = (row: number, col: number, orientation: 'horizontal' | 'vertical', length: number) => {
+    useEffect(() => {
+        connection?.on("ShipPlaced", (updatedBoard) => {
+            setLocalBoard(updatedBoard.grid); // Update the local board state
+            setPlacedShips(updatedBoard.ships); // Update the placed ships
+            setShips((prevShips) =>
+            prevShips.map((ship) =>
+                updatedBoard.ships.some((s: Ship) => s.name === ship.name)
+                ? { ...ship, isPlaced: true }
+                : ship
+            )
+        );})
+        
+        connection?.on("ShipPlacementFailed", (errorMessage) => {
+            console.error("Ship placement failed:", errorMessage);
+            alert(`Ship placement failed: ${errorMessage}`);
+        });
+    }, [connection]);
 
+    const canPlaceShip = (row: number, col: number, orientation: 'horizontal' | 'vertical', length: number) => {
         return true; 
     };
 
-    const handleCellClick = (row: number, col: number) => {
+    const handleCellClick = async (row: number, col: number) => {
         if (isPlayerBoard && selectedShip) {
-            if (canPlaceShip(row, col, selectedShip.orientation, selectedShip.length)) {
-                const newBoard = [...localBoard];
-                const shipCoordinates: Coordinate[] = []; 
-    
-                for (let i = 0; i < selectedShip.length; i++) {
-                    const r = selectedShip.orientation === 'horizontal' ? row : row + i;
-                    const c = selectedShip.orientation === 'horizontal' ? col + i : col;
-    
-
-                    if (r < newBoard.length && c < newBoard[r].length) {
-                        newBoard[r][c].hasShip = true; 
-                        shipCoordinates.push({ row: r, column: c }); 
-                    } else {
-                        console.error(`Attempted to place ship out of bounds at (${r}, ${c})`);
-                        return; 
-                    }
-                }
-    
-                const updatedShip: Ship = {
-                    name: selectedShip.name,
-                    length: selectedShip.length,
-                    orientation: selectedShip.orientation,
-                    coordinates: shipCoordinates,
-                    hitCount: 0, 
-                    isSunk: false,
-                    isPlaced: true
-                };
-    
-
-                setLocalBoard(newBoard);
-                setPlacedShips(prevShips => [...prevShips, updatedShip]); 
-                setShips(prevShips => 
-                    prevShips.map(ship => 
-                        ship.name === selectedShip.name ? { ...ship, isPlaced: true, coordinates: shipCoordinates, hitCount: 0, isSunk: false } : ship
-                    )
-                );
-    
-                if (onShipsPlaced) onShipsPlaced(); 
-                setSelectedShip(null); 
+            try{
+                await connection?.invoke("PlaceShip", gameId, playerId, selectedShip.name, row, col, selectedShip.orientation)
+                console.log(`Placement request sent for ${selectedShip.name} at (${row}, ${col}) with orientation ${selectedShip.orientation}`);
+                setSelectedShip(null);
+            } catch (error) {
+                console.error("Error placing ship:", error);
             }
         } else if (!isPlayerBoard && !isTeammateBoard && onShoot) {
             onShoot(row, col);
@@ -95,27 +80,7 @@ const Board: React.FC<BoardProps> = ({
     };
     
     const handleReadyClick = async () => {
-        if (placedShips.length === ships.length) { // Check if all ships are placed
-            // Prepare the data to send to the server
-            const allShipsData = placedShips.map(ship => ({
-                name: ship.name,
-                length: ship.length,
-                orientation: ship.orientation,
-                coordinates: ship.coordinates,
-                hitCount: ship.hitCount,
-                isSunk: ship.isSunk,
-                isPlaced: ship.isPlaced
-            }));
-    
-            try {
-                // Send the ships data to the server
-                await connection?.invoke("PlaceShip", gameId, playerId, allShipsData);
-                console.log("All ships have been placed successfully.");
-                setPlayerReady(gameId, playerId); // Mark the player as ready after placing ships
-            } catch (error) {
-                console.error("Error placing ships:", error);
-            }
-        }
+        setPlayerReady(gameId, playerId); 
     };
     
 
