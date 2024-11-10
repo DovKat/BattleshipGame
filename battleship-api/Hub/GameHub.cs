@@ -15,9 +15,15 @@ using battleship_api.Strategy;
 public class GameHub : Hub, IGameObserver
 {
     private readonly ILogger<GameHub> _logger;
+    private readonly Dictionary<string, AbstractFactory> _teamShipFactories;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
     public GameHub(ILogger<GameHub> logger)
     {
+        _teamShipFactories = new Dictionary<string, AbstractFactory>
+        {
+            { "Blue", new BlueTeamShipFactory() },
+            { "Red", new RedTeamShipFactory() }
+        };
         _logger = logger;
     }
     public async Task Update(Game game, string messageType, object data)
@@ -175,13 +181,41 @@ public class GameHub : Hub, IGameObserver
         }
     }
 
+    public async Task GenerateRandomShips(string gameId, string playerId)
+    {
+        if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
+        {
+            var shipFactory = new ShipFactory();
+            var randomPlacer = new RandomShipPlacer(shipFactory, boardSize: 10);
+            randomPlacer.FillBoardWithRandomShips(player.Board);
+            await Clients.Caller.SendAsync("ShipPlaced", player.Board); // Send updated board to player
+            await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all clients in the group of the update
+        }
+        else
+        {
+            await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
+        }
+    }
+
 
     public async Task PlaceShip(string gameId, string playerId, string shipType, int row, int col, string orientation)
     {
         if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
         {
-            ShipFactory _shipFactory = new ShipFactory();
-            var newShip = _shipFactory.CreateShip(shipType);
+            // Determine the correct factory based on the team
+            AbstractFactory shipFactory = player.Team == "Blue" ? new BlueTeamShipFactory() : new RedTeamShipFactory();
+
+            // Use the factory to create the ship based on shipType
+            Ship newShip = shipType switch
+            {
+                "Destroyer" => shipFactory.CreateDestroyer(),
+                "Submarine" => shipFactory.CreateSubmarine(),
+                "Cruiser" => shipFactory.CreateCruiser(),
+                "Battleship" => shipFactory.CreateBattleship(),
+                "Carrier" => shipFactory.CreateCarrier(),
+                _ => throw new ArgumentException("Invalid ship type")
+            };
+
             newShip.Orientation = orientation;
             newShip.isPlaced = true;
 
@@ -205,9 +239,9 @@ public class GameHub : Hub, IGameObserver
 
             await Clients.Caller.SendAsync("ShipPlaced", player.Board);
             await Clients.Group(gameId).SendAsync("UpdateGameState", game);
-            game.NotifyObservers("ShipPlaced", new { PlayerId = playerId, Board = player.Board });  // Notify observers of the ship placement
-        } 
-        else 
+            game.NotifyObservers("ShipPlaced", new { PlayerId = playerId, Board = player.Board });
+        }
+        else
         {
             await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
         }
@@ -517,4 +551,6 @@ public class GameHub : Hub, IGameObserver
         }
         return new Board { Grid = cells, Ships = new List<Ship>() };
     }
+
+    
 }

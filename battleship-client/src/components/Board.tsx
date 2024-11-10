@@ -65,10 +65,6 @@ const Board: React.FC<BoardProps> = ({
         });
     }, [connection]);
 
-    const canPlaceShip = (row: number, col: number, orientation: 'horizontal' | 'vertical', length: number) => {
-        return true;
-    };
-
     const handleCellClick = async (row: number, col: number) => {
         if (isPlayerBoard && selectedShip) {
             try {
@@ -87,6 +83,15 @@ const Board: React.FC<BoardProps> = ({
         setPlayerReady(gameId, playerId); // Signal that the player is ready
         setIsReady(true); // Hide the "Ready" button
     };
+
+    const handleRandomShips = async () => {
+        try {
+            await connection?.invoke("GenerateRandomShips", gameId, playerId);
+        } catch (error) {
+            console.error("Error generating random ships:", error);
+        }
+    };
+    
 
     return (
         <div>
@@ -111,6 +116,9 @@ const Board: React.FC<BoardProps> = ({
                             </button>
                         </div>
                     )}
+                    <div>
+                        <button onClick={handleRandomShips}>Generate random ships</button>
+                    </div>
                 </div>
             )}
             <h3>{playerName}'s Board {isTeammateBoard && "(Teammate)"}</h3>
