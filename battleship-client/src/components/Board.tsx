@@ -65,10 +65,6 @@ const Board: React.FC<BoardProps> = ({
         });
     }, [connection]);
 
-    const canPlaceShip = (row: number, col: number, orientation: 'horizontal' | 'vertical', length: number) => {
-        return true;
-    };
-
     const handleCellClick = async (row: number, col: number) => {
         if (isPlayerBoard && selectedShip) {
             try {
