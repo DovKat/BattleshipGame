@@ -31,15 +31,16 @@ const Board: React.FC<BoardProps> = ({
     const [localBoard, setLocalBoard] = useState<Cell[][]>(board);
     const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
     const [ships, setShips] = useState<Ship[]>([
-        { name: 'Destroyer', length: 2, coordinates: [], isPlaced: false,orientation: 'horizontal',hitCount: 0 ,isSunk: false},
-        { name: 'Submarine', length: 3, coordinates: [], isPlaced: false,orientation: 'horizontal',hitCount: 0,isSunk: false },
-        { name: 'Cruiser', length: 3, coordinates: [], isPlaced: false,orientation: 'horizontal',hitCount: 0,isSunk: false },
-        { name: 'Battleship', length: 4, coordinates: [], isPlaced: false ,orientation: 'horizontal',hitCount: 0,isSunk: false},
-        { name: 'Carrier', length: 5, coordinates: [], isPlaced: false,orientation: 'horizontal',hitCount: 0,isSunk: false},
+        { name: 'Destroyer', length: 2, coordinates: [], isPlaced: false, orientation: 'horizontal', hitCount: 0, isSunk: false },
+        { name: 'Submarine', length: 3, coordinates: [], isPlaced: false, orientation: 'horizontal', hitCount: 0, isSunk: false },
+        { name: 'Cruiser', length: 3, coordinates: [], isPlaced: false, orientation: 'horizontal', hitCount: 0, isSunk: false },
+        { name: 'Battleship', length: 4, coordinates: [], isPlaced: false, orientation: 'horizontal', hitCount: 0, isSunk: false },
+        { name: 'Carrier', length: 5, coordinates: [], isPlaced: false, orientation: 'horizontal', hitCount: 0, isSunk: false },
     ]);
     const [placedShips, setPlacedShips] = useState<Ship[]>([]);
     const { setPlayerReady } = useContext(SignalRContext)!;
     const { connection } = useContext(SignalRContext)!;
+    const [isReady, setIsReady] = useState(false); // State to track if the "Ready" button is clicked
 
     useEffect(() => {
         setLocalBoard(board);
@@ -50,13 +51,14 @@ const Board: React.FC<BoardProps> = ({
             setLocalBoard(updatedBoard.grid); // Update the local board state
             setPlacedShips(updatedBoard.ships); // Update the placed ships
             setShips((prevShips) =>
-            prevShips.map((ship) =>
-                updatedBoard.ships.some((s: Ship) => s.name === ship.name)
-                ? { ...ship, isPlaced: true }
-                : ship
-            )
-        );})
-        
+                prevShips.map((ship) =>
+                    updatedBoard.ships.some((s: Ship) => s.name === ship.name)
+                        ? { ...ship, isPlaced: true }
+                        : ship
+                )
+            );
+        });
+
         connection?.on("ShipPlacementFailed", (errorMessage) => {
             console.error("Ship placement failed:", errorMessage);
             alert(`Ship placement failed: ${errorMessage}`);
@@ -64,13 +66,13 @@ const Board: React.FC<BoardProps> = ({
     }, [connection]);
 
     const canPlaceShip = (row: number, col: number, orientation: 'horizontal' | 'vertical', length: number) => {
-        return true; 
+        return true;
     };
 
     const handleCellClick = async (row: number, col: number) => {
         if (isPlayerBoard && selectedShip) {
-            try{
-                await connection?.invoke("PlaceShip", gameId, playerId, selectedShip.name, row, col, selectedShip.orientation)
+            try {
+                await connection?.invoke("PlaceShip", gameId, playerId, selectedShip.name, row, col, selectedShip.orientation);
                 console.log(`Placement request sent for ${selectedShip.name} at (${row}, ${col}) with orientation ${selectedShip.orientation}`);
                 setSelectedShip(null);
             } catch (error) {
@@ -80,11 +82,11 @@ const Board: React.FC<BoardProps> = ({
             onShoot(row, col);
         }
     };
-    
+
     const handleReadyClick = async () => {
-        setPlayerReady(gameId, playerId); 
+        setPlayerReady(gameId, playerId); // Signal that the player is ready
+        setIsReady(true); // Hide the "Ready" button
     };
-    
 
     return (
         <div>
@@ -104,8 +106,7 @@ const Board: React.FC<BoardProps> = ({
                             <button onClick={() => setSelectedShip({ ...selectedShip, orientation: selectedShip.orientation === 'horizontal' ? 'vertical' : 'horizontal' })}>
                                 Change Orientation: {selectedShip.orientation}
                             </button>
-                            <button onClick={() => {
-                            }} style={{ marginLeft: '10px' }}>
+                            <button onClick={() => {}} style={{ marginLeft: '10px' }}>
                                 Undo Last Placement
                             </button>
                         </div>
@@ -128,7 +129,7 @@ const Board: React.FC<BoardProps> = ({
                             key={`${rowIndex}-${colIndex}`}
                             onClick={() => handleCellClick(rowIndex, colIndex)}
                             className={cell.isHit ? 'isHit' :
-                                    cell.isMiss ? 'isMissed' :  // New class for missed shots
+                                cell.isMiss ? 'isMissed' : // New class for missed shots
                                     cell.hasShip ? (isPlayerBoard || isTeammateBoard ? 'hasShip' : 'empty') :
                                     'empty'}
                             style={{
@@ -145,7 +146,7 @@ const Board: React.FC<BoardProps> = ({
                     ))
                 )}
             </div>
-            {isPlayerBoard && placedShips.length === ships.length && (
+            {isPlayerBoard && placedShips.length === ships.length && !isReady && (
                 <button onClick={handleReadyClick} style={{ marginTop: '10px' }}>
                     Ready
                 </button>

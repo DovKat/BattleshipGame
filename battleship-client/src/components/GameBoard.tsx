@@ -34,8 +34,15 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
             setIsCurrentTurn(updatedGame.currentTurn === currentTeam);
         });
 
-        connection?.on("MoveResult", (PlayerId, Row, Col, Result) => {
-            console.log(`${PlayerId} shot at (${Row}, ${Col}): ${Result}`);
+        connection?.on("MoveResult", (moveResult) => {
+            const { playerId, affectedCoordinates, result } = moveResult;
+        
+            // This is where you handle multiple affected cells
+            for (let i = 0; i < affectedCoordinates.length; i++) {
+                const { row, col } = affectedCoordinates[i];
+                const currentResult = result[i]; // Each result corresponds to a specific cell
+                updateBoardCell(row, col, currentResult);
+            }
         });
 
         connection?.on("ReceiveUpdatedScore", (playerId: string, score: number) => {
@@ -53,26 +60,48 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         };
     }, [connection, currentTeam]);
 
+
+    function updateBoardCell(row: number, col: number, result: "Hit" | "Miss" | "Sunk") {
+        const cell = document.getElementById(`cell-${row}-${col}`);
+        if (result === "Hit") {
+            cell?.classList.add("hit");
+        } else if (result === "Sunk") {
+            cell?.classList.add("sunk");
+        } else if (result === "Miss") {
+            cell?.classList.add("miss");
+        }
+    }
+    
+
     // Updated handleShoot function to include attack type
     const handleShoot = async (row: number, col: number, targetPlayerId: string) => {
         if (!isCurrentTurn || !currentPlayerId || targetPlayerId === currentPlayerId) return;
-    
+        
         try {
-            // Send shot request with attack type
+            // Send shot request with attack type (result might be an array for multiple hits)
             const result = await connection?.invoke("MakeMove", "game-1", currentPlayerId, row, col, selectedAttack);
-    
-            // Assuming result is an object that contains the status (hit/miss)
+        
+            // Assuming result is an array or object containing information about the hit/miss for each square
             if (result) {
                 console.log(`${currentPlayerId} shot at (${row}, ${col}): ${result}`);
-                // Update game state if needed, to reflect missed shot
+                // Update game state if needed, to reflect missed shot or multiple hits
                 setGame((prevGame) => {
-                    if (!prevGame || !prevGame.players) return prevGame;  // Return early if game or players is null/undefined
-                    
+                    if (!prevGame || !prevGame.players) return prevGame;
+        
                     const updatedGame = { ...prevGame };
                     const targetPlayer = updatedGame.players[targetPlayerId];
+        
                     if (targetPlayer) {
-                        targetPlayer.board.grid[row][col].isHit = result === 'hit';
-                        targetPlayer.board.grid[row][col].isMiss = result === 'miss';
+                        if (Array.isArray(result)) {
+                            result.forEach(({ row, col, hit }) => {
+                                targetPlayer.board.grid[row][col].isHit = hit === 'hit';
+                                targetPlayer.board.grid[row][col].isMiss = hit === 'miss';
+                            });
+                        } else {
+                            targetPlayer.board.grid[result.row][result.col].isHit = result.hit === 'hit';
+                            targetPlayer.board.grid[result.row][result.col].isMiss = result.hit === 'miss';
+                        }
+                        
                     }
                     return updatedGame;
                 });
@@ -81,6 +110,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
             console.error("Error shooting at target:", error);
         }
     };
+    
 
     // Function to get a player's board by their ID
     const getPlayerBoard = (playerId: string) => {
@@ -120,9 +150,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
             {isCurrentTurn && (
                 <div className="attack-buttons">
                     <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
-                    <button onClick={() => setSelectedAttack("small-bomb")}>Small Bomb</button>
-                    <button onClick={() => setSelectedAttack("big-bomb")}>Big Bomb</button>
-                    <button onClick={() => setSelectedAttack("super-bomb")}>Super Bomb</button>
+                    <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
+                    <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
+                    <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
                     <p>Selected Attack: {selectedAttack}</p>
                 </div>
             )}

@@ -9,6 +9,7 @@ using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
+using battleship_api.Strategy;
 
 
 public class GameHub : Hub, IGameObserver
@@ -291,8 +292,20 @@ public class GameHub : Hub, IGameObserver
 
         Console.WriteLine($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
     }
+    public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
+    {
+        IAttackStrategy attackStrategy = attackType switch
+        {
+            "smallbomb" => new SmallBombAttack(),
+            "bigbomb" => new BigBombAttack(),
+            "megabomb" => new MegaBombAttack(),
+            _ => new RegularAttack()
+        };
 
-    public async Task MakeMove(string gameId, string playerId, int row, int col)
+        await MakeMove(gameId, playerId, row, col, attackStrategy);
+    }
+
+    private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
     {
         if (_games.TryGetValue(gameId, out var game))
         {
@@ -302,35 +315,41 @@ public class GameHub : Hub, IGameObserver
                 await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
                 return;
             }
-
+    
             var team = game.Teams.First(t => t.Name == player.Team);
             if (team.Players[game.CurrentPlayerIndex].Id != playerId)
             {
                 await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
                 return;
             }
-
+    
             var opponentTeam = game.Teams.First(t => t.Name != player.Team);
-            var hitResult = ProcessMove(opponentTeam, row, col);
-            var points = UpdatePlayerScore(playerId, hitResult, gameId);
-
-            await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });
-            game.NotifyObservers("MoveResult", new { PlayerId = playerId, Row = row, Col = col, Result = hitResult });  // Notify observers of the move result
-
-            if (opponentTeam.Players.All(p => p.Board.Ships.All(s => s.IsSunk)))
+    
+            // Get affected coordinates based on the attack strategy
+            var startCoordinate = new Coordinate { Row = row, Column = col };
+            var affectedCoordinates = attackStrategy.GetAffectedCoordinates(startCoordinate);
+    
+            // Log affected coordinates
+            _logger.LogInformation($"Player {playerId} attacked at ({row}, {col}) using {attackStrategy.GetType().Name}. Affected coordinates:");
+            foreach (var coord in affectedCoordinates)
             {
-                game.State = "Ended";
-                await Clients.Group(game.GameId).SendAsync("GameEnded", $"{player.Team} team wins!");
-                game.NotifyObservers("GameEnded", $"{player.Team} team wins!");  // Notify observers about game end
+                _logger.LogInformation($"- Row: {coord.Row}, Column: {coord.Column}");
             }
-            else
+    
+            foreach (var coord in affectedCoordinates)
             {
-                AdvanceTurn(game);
-                await Clients.Group(gameId).SendAsync("UpdateGameState", game);
-                game.NotifyObservers("UpdateGameState", game);  // Notify observers of the updated game state
+                if (coord.Row >= 0 && coord.Row < 10 && coord.Column >= 0 && coord.Column < 10) // Ensure within board bounds
+                {
+                    var hitResult = ProcessMove(opponentTeam, coord.Row, coord.Column);
+                    await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = coord.Row, Col = coord.Column, Result = hitResult });
+                }
             }
+    
+            AdvanceTurn(game);
+            await Clients.Group(gameId).SendAsync("UpdateGameState", game);
         }
     }
+
 
 
 
@@ -339,22 +358,30 @@ public class GameHub : Hub, IGameObserver
     {
         foreach (var player in opponentTeam.Players)
         {
-            var cell = player.Board.Grid[row][col];
+            var cell = player.Board.Grid[row][col];  // Get the cell being attacked
             if (cell.HasShip && !cell.IsHit)
             {
-                cell.IsHit = true;
+                cell.IsHit = true;  // Mark the cell as hit
                 var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
-                ship.HitCount++;
+                ship.HitCount++;  // Increment the ship's hit count
 
                 if (ship.IsSunk)
                 {
-                    return "Sunk";
+                    return "Sunk";  // Ship is sunk
                 }
 
-                return "Hit";
+                return "Hit";  // Ship is hit but not yet sunk
             }
         }
-        return "Miss";
+
+        // If no ship was hit, mark it as a miss
+        opponentTeam.Players.ForEach(player =>
+        {
+            var missedCell = player.Board.Grid[row][col];
+            missedCell.IsMiss = true;  // Mark this cell as a miss
+        });
+
+        return "Miss";  // No ship, it's a miss
     }
 
     private async void AdvanceTurn(Game game)

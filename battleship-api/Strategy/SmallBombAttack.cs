@@ -4,7 +4,7 @@ public class SmallBombAttack : IAttackStrategy
 {
     public List<Coordinate> GetAffectedCoordinates(Coordinate start)
     {
-        return GenerateSquare(start, 1); // 3x3 area
+        return GenerateSquare(start, 1); // 5x5 area
     }
     public List<Coordinate> GenerateSquare(Coordinate center, int radius)
     {
