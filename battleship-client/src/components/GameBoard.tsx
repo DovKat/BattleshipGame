@@ -16,35 +16,35 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [game, setGame] = useState<EGame | null>(null);
     const [scores, setScores] = useState<{ [key: string]: number }>({});
+    const [selectedAttack, setSelectedAttack] = useState<string>("regular"); // Track selected attack type
 
     const { connection } = useContext(SignalRContext)!;
-
     const currentPlayer = players.find(player => player.id === currentPlayerId);
     const currentTeam = currentPlayer?.team;
 
     useEffect(() => {
-        // Subscribe to the GameStarted event
         connection?.on("GameStarted", (gameState: EGame) => {
-            console.log("Game has started!");
             setGameStarted(true);
-            setGame(gameState); // Set initial game state
-            setIsCurrentTurn(gameState.currentTurn === currentTeam); // Check if it's the current team's turn
+            setGame(gameState);
+            setIsCurrentTurn(gameState.currentTurn === currentTeam);
         });
 
-        // Subscribe to the UpdateGameState event
         connection?.on("UpdateGameState", (updatedGame: EGame) => {
-            console.log("UpdateGameState received:", updatedGame);
             setGame(updatedGame);
-            // Check if it's the current team's turn
             setIsCurrentTurn(updatedGame.currentTurn === currentTeam);
         });
 
-        // Handle MoveResult event to manage player's turn
-        connection?.on("MoveResult", (PlayerId, Row, Col, Result) => {
-            console.log(`${PlayerId} shot at (${Row}, ${Col}): ${Result}`);
+        connection?.on("MoveResult", (moveResult) => {
+            const { playerId, affectedCoordinates, result } = moveResult;
+        
+            // This is where you handle multiple affected cells
+            for (let i = 0; i < affectedCoordinates.length; i++) {
+                const { row, col } = affectedCoordinates[i];
+                const currentResult = result[i]; // Each result corresponds to a specific cell
+                updateBoardCell(row, col, currentResult);
+            }
         });
 
-        // Handle ReceiveUpdatedScore event to display player's score
         connection?.on("ReceiveUpdatedScore", (playerId: string, score: number) => {
             setScores(prevScores => ({
                 ...prevScores,
@@ -60,26 +60,67 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         };
     }, [connection, currentTeam]);
 
+
+    function updateBoardCell(row: number, col: number, result: "Hit" | "Miss" | "Sunk") {
+        const cell = document.getElementById(`cell-${row}-${col}`);
+        if (result === "Hit") {
+            cell?.classList.add("hit");
+        } else if (result === "Sunk") {
+            cell?.classList.add("sunk");
+        } else if (result === "Miss") {
+            cell?.classList.add("miss");
+        }
+    }
+    
+
+    // Updated handleShoot function to include attack type
     const handleShoot = async (row: number, col: number, targetPlayerId: string) => {
         if (!isCurrentTurn || !currentPlayerId || targetPlayerId === currentPlayerId) return;
-
+        
         try {
-            await connection?.invoke("MakeMove", "game-1", currentPlayerId, row, col);
+            // Send shot request with attack type (result might be an array for multiple hits)
+            const result = await connection?.invoke("MakeMove", "game-1", currentPlayerId, row, col, selectedAttack);
+        
+            // Assuming result is an array or object containing information about the hit/miss for each square
+            if (result) {
+                console.log(`${currentPlayerId} shot at (${row}, ${col}): ${result}`);
+                // Update game state if needed, to reflect missed shot or multiple hits
+                setGame((prevGame) => {
+                    if (!prevGame || !prevGame.players) return prevGame;
+        
+                    const updatedGame = { ...prevGame };
+                    const targetPlayer = updatedGame.players[targetPlayerId];
+        
+                    if (targetPlayer) {
+                        if (Array.isArray(result)) {
+                            result.forEach(({ row, col, hit }) => {
+                                targetPlayer.board.grid[row][col].isHit = hit === 'hit';
+                                targetPlayer.board.grid[row][col].isMiss = hit === 'miss';
+                            });
+                        } else {
+                            targetPlayer.board.grid[result.row][result.col].isHit = result.hit === 'hit';
+                            targetPlayer.board.grid[result.row][result.col].isMiss = result.hit === 'miss';
+                        }
+                        
+                    }
+                    return updatedGame;
+                });
+            }
         } catch (error) {
             console.error("Error shooting at target:", error);
         }
     };
+    
 
     // Function to get a player's board by their ID
     const getPlayerBoard = (playerId: string) => {
         if (game && game.players) {
             const playerInGame = game.players[playerId];
-            return playerInGame ? playerInGame.board : null; // Return the board object
+            return playerInGame ? playerInGame.board : null;
         }
         return null; 
     };
 
-    // Identify the teammate
     const getTeammate = (currentPlayerId: string) => {
         if (currentPlayer && game && game.players) {
             return Object.values(game.players).find(
@@ -99,17 +140,28 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         <div className="game-board-container">
             <h2>Game Board</h2>
             {gameStarted && <p>The game has started!</p>}
-                    {isCurrentTurn ? (
-            <p>It's your turn!</p>
-        ) : (
-            <p>Waiting for {game?.currentTurn} to play...</p> // Display other team's turn
-        )}
+            {isCurrentTurn ? (
+                <p>It's your turn!</p>
+            ) : (
+                <p>Waiting for {game?.currentTurn} to play...</p>
+            )}
+
+            {/* Attack Selection Buttons for the Attacking Player */}
+            {isCurrentTurn && (
+                <div className="attack-buttons">
+                    <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
+                    <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
+                    <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
+                    <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
+                    <p>Selected Attack: {selectedAttack}</p>
+                </div>
+            )}
+
             <div className="boards-container">
                 <div className="board-row">
                     {currentPlayer && (
                         <>
-                            {/* Current Player's Board */}
-                            <div key={currentPlayer.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
+                            <div key={currentPlayer.id} className="board-wrapper" style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
                                 <div className="board-title">{currentPlayer.name}'s Board</div>
                                 {currentPlayer.board && (
                                     <Board
@@ -127,9 +179,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                 )}
                             </div>
 
-                            {/* Teammate's Board */}
                             {teammate && (
-                                <div key={teammate.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(teammate.team)}}>
+                                <div key={teammate.id} className="board-wrapper" style={{backgroundColor: getTeamColor(teammate.team)}}>
                                     <div className="board-title">{teammate.name}'s Board</div>
                                     {teammate.board && (
                                         <Board
@@ -137,7 +188,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                                             isPlayerBoard={false}
                                             isTeammateBoard={true}
                                             onShipsPlaced={undefined}
-                                            onShoot={undefined} // Disable shooting for teammates
+                                            onShoot={undefined}
                                             playerName={teammate.name}
                                             playerId={teammate.id}
                                             gameId="game-1"
@@ -151,7 +202,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                     )}
                 </div>
 
-                {/* Row for Opponent Boards */}
                 <div className="board-row">
                     {players.map((player) => {
                         const isOpponentBoard = player.team !== currentTeam;
@@ -160,14 +210,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
 
                         return (
                             isOpponentBoard && (
-                                <div key={player.id} className={`board-wrapper`} style={{backgroundColor: getTeamColor(player.team)}}>
+                                <div key={player.id} className="board-wrapper" style={{backgroundColor: getTeamColor(player.team)}}>
                                     <div className="board-title">{player.name}'s Board</div>
                                     {board && (
                                         <Board
                                             board={board.grid}
                                             isPlayerBoard={false}
                                             isTeammateBoard={false}
-                                            onShipsPlaced={undefined} // Disable ships placing for opponents
+                                            onShipsPlaced={undefined}
                                             onShoot={isCurrentTurn ? (row, col) => handleShoot(row, col, player.id) : undefined}
                                             playerName={player.name}
                                             playerId={player.id}
