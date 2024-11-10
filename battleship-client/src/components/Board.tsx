@@ -84,6 +84,14 @@ const Board: React.FC<BoardProps> = ({
     const handleReadyClick = async () => {
         setPlayerReady(gameId, playerId); 
     };
+
+    const handleRandomShips = async () => {
+        try {
+            await connection?.invoke("GenerateRandomShips", gameId, playerId);
+        } catch (error) {
+            console.error("Error generating random ships:", error);
+        }
+    };
     
 
     return (
@@ -110,6 +118,9 @@ const Board: React.FC<BoardProps> = ({
                             </button>
                         </div>
                     )}
+                    <div>
+                        <button onClick={handleRandomShips}>Generate random ships</button>
+                    </div>
                 </div>
             )}
             <h3>{playerName}'s Board {isTeammateBoard && "(Teammate)"}</h3>

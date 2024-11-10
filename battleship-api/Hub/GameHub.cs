@@ -143,6 +143,21 @@ public class GameHub : Hub, IGameObserver
     }
 }
 
+ public async Task GenerateRandomShips(string gameId, string playerId)
+ {
+    if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
+    {
+        var shipFactory = new ShipFactory();
+        var randomPlacer = new RandomShipPlacer(shipFactory, boardSize: 10);
+        randomPlacer.FillBoardWithRandomShips(player.Board);
+        await Clients.Caller.SendAsync("ShipPlaced", player.Board); // Send updated board to player
+        await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all clients in the group of the update
+    }
+    else
+    {
+        await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
+    }
+ }
 
 
 public async Task PlaceShip(string gameId, string playerId, string shipType, int row, int col, string orientation)
@@ -419,4 +434,6 @@ private async Task CheckStartGame(Game game)
         }
         return new Board { Grid = cells, Ships = new List<Ship>() };
     }
+
+    
 }

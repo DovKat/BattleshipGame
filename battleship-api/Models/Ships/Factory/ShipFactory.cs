@@ -20,6 +20,7 @@ namespace backend.ShipFactory
                     throw new ArgumentException($"Unknown ship type: {type}");
             }
         }
+
         
     }
 }
