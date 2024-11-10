@@ -61,17 +61,9 @@ public class GameHub : Hub, IGameObserver
 
             if (playerTeam.Players.Count < 2)
             {
-                
-                
-                var player = new Player
-                {
-                    Id = playerId,
-                    Name = playerName,
-                    Team = team,
-                    Board = InitializeBoard(),
-                    IsReady = false
-                };
 
+                var player  = CreateNewPlayer(playerId, playerName, team, InitializeBoard(), false);
+                player.IsReady = false;
                 playerTeam.Players.Add(player);
                 game.Players[playerId] = player;
 
@@ -101,13 +93,12 @@ public class GameHub : Hub, IGameObserver
     // Method to create a new game
     public Game CreateNewGame(string gameId)
     {
-        // Use StandardGameBuilder or another builder based on the scenario
-        var gameBuilder = new StandardGameBuilder();
+        IGameBuilder gameBuilder = new StandardGameBuilder();
         gameBuilder.SetGameId(gameId);
         gameBuilder.SetTeams(new List<Team>
         {
-            new() { Name = "Red", Players = new List<Player>() },
-            new() { Name = "Blue", Players = new List<Player>() }
+            new Team { Name = "Red", Players = new List<Player>() },
+            new Team { Name = "Blue", Players = new List<Player>() }
         });
         gameBuilder.SetState("Waiting");
 
@@ -117,7 +108,6 @@ public class GameHub : Hub, IGameObserver
     }
     public Player CreateNewPlayer(string playerId, string playerName, string team, Board board, bool isAI = false)
     {
-        // Select builder type based on whether the player is an AI or a human
         IPlayerBuilder playerBuilder = isAI ? new AIPlayerBuilder() : new StandardPlayerBuilder();
         playerBuilder.SetPlayerId(playerId);
         playerBuilder.SetPlayerName(playerName);
@@ -125,6 +115,34 @@ public class GameHub : Hub, IGameObserver
         playerBuilder.SetBoard(board);
 
         return playerBuilder.Build();
+    }
+    public async Task StartDemoGame(string gameId)
+    {
+        var game = CreateNewGame(gameId);
+    
+        // Add players to teams with pre-defined IDs and names
+        var player1 = CreateNewPlayer("P1", "DemoPlayer1", "Red", InitializeBoard());
+        var player2 = CreateNewPlayer("P2", "DemoPlayer2", "Red", InitializeBoard());
+        var player3 = CreateNewPlayer("P3", "DemoPlayer3", "Blue", InitializeBoard());
+        var player4 = CreateNewPlayer("P4", "DemoPlayer4", "Blue", InitializeBoard());
+
+        game.Teams[0].Players.Add(player1);
+        game.Teams[0].Players.Add(player2);
+        game.Teams[1].Players.Add(player3);
+        game.Teams[1].Players.Add(player4);
+
+        game.Players[player1.Id] = player1;
+        game.Players[player2.Id] = player2;
+        game.Players[player3.Id] = player3;
+        game.Players[player4.Id] = player4;
+
+        _games[gameId] = game;
+        await PlaceRandomShipsForDemo(gameId);
+        
+        await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams);
+        await Clients.Group(gameId).SendAsync("GameStarted", game);
+        
+        game.State = "InProgress";
     }
     public async Task SetPlayerReady(string gameId, string playerId)
     {
@@ -208,7 +226,55 @@ public class GameHub : Hub, IGameObserver
 
         return coordinates;
     }
+    public async Task PlaceRandomShipsForDemo(string gameId)
+{
+    if (_games.TryGetValue(gameId, out var game))
+    {
+        var random = new Random();
+        var shipTypes = new List<string> { "Carrier", "Battleship", "Destroyer", "Submarine", "PatrolBoat" };
+        
+        foreach (var team in game.Teams)
+        {
+            foreach (var player in team.Players)
+            {
+                foreach (var shipType in shipTypes)
+                {
+                    ShipFactory shipFactory = new ShipFactory();
+                    var newShip = shipFactory.CreateShip(shipType);
+                    
+                    bool placed = false;
+                    while (!placed)
+                    {
+                        int row = random.Next(0, 10);
+                        int col = random.Next(0, 10);
+                        string orientation = random.Next(0, 2) == 0 ? "horizontal" : "vertical";
+                        var startCoordinate = new Coordinate { Row = row, Column = col };
+                        var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
 
+                        if (IsPlacementValid(player.Board, shipCoordinates))
+                        {
+                            newShip.Coordinates = shipCoordinates;
+                            newShip.Orientation = orientation;
+                            newShip.isPlaced = true;
+                            player.Board.Ships.Add(newShip);
+
+                            foreach (var coord in shipCoordinates)
+                            {
+                                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+                            }
+
+                            placed = true;
+                        }
+                    }
+                }
+
+                await Clients.Client(player.Id).SendAsync("ShipPlacementComplete", player.Board);
+            }
+        }
+        
+        await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+    }
+}
     private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
         foreach (var coord in coordinates)

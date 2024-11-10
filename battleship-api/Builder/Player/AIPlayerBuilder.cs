@@ -1,6 +1,6 @@
 namespace battleship_api.Builder;
 
-public class StandardPlayerBuilder : IPlayerBuilder
+public class AIPlayerBuilder : IPlayerBuilder
 {
     private string _playerId;
     private string _playerName;
@@ -20,7 +20,7 @@ public class StandardPlayerBuilder : IPlayerBuilder
             Name = _playerName,
             Team = _team,
             Board = _board,
-            IsReady = false
+            IsReady = true  // AI players are immediately ready
         };
     }
 }
