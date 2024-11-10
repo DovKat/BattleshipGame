@@ -128,14 +128,16 @@ const Board: React.FC<BoardProps> = ({
                             key={`${rowIndex}-${colIndex}`}
                             onClick={() => handleCellClick(rowIndex, colIndex)}
                             className={cell.isHit ? 'isHit' :
-                                       cell.hasShip ? (isPlayerBoard || isTeammateBoard ? 'hasShip' : 'empty') :
-                                       'empty'}
+                                    cell.isMiss ? 'isMissed' :  // New class for missed shots
+                                    cell.hasShip ? (isPlayerBoard || isTeammateBoard ? 'hasShip' : 'empty') :
+                                    'empty'}
                             style={{
                                 width: '30px',
                                 height: '30px',
                                 backgroundColor: cell.isHit ? 'red' :
-                                                 cell.hasShip ? (isPlayerBoard || isTeammateBoard ? 'blue' : 'white') :
-                                                 'white',
+                                                cell.isMiss ? 'lightgray' : // Light gray for missed shots
+                                                cell.hasShip ? (isPlayerBoard || isTeammateBoard ? 'blue' : 'white') :
+                                                'white',
                                 border: '1px solid black',
                                 cursor: !isPlayerBoard && !isTeammateBoard && onShoot ? 'pointer' : 'default'
                             }}

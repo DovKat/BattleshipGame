@@ -63,3 +63,5 @@ packages/
 publish/
 *.publishsettings
 /battleship-api/bin
+/battleship-api/obj
+/battleship-api/bin
