@@ -275,6 +275,9 @@ public class GameHub : Hub, IGameObserver
             await Clients.Group(game.GameId).SendAsync("GameStarted", game);
             game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
         }
+
+        TestPrototypeCopying test = new TestPrototypeCopying();
+        test.StartTest();
     }
 
 
