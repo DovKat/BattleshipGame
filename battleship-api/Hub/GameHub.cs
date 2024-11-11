@@ -9,9 +9,8 @@ using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
+using battleship_api.Strategy.Decorator;
 using battleship_api.Strategy;
-
-
 public class GameHub : Hub, IGameObserver
 {
     private readonly ILogger<GameHub> _logger;
@@ -397,15 +396,26 @@ public class GameHub : Hub, IGameObserver
     }
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {
-        IAttackStrategy attackStrategy = attackType switch
-        {
-            "smallbomb" => new SmallBombAttack(),
-            "bigbomb" => new BigBombAttack(),
-            "megabomb" => new MegaBombAttack(),
-            _ => new RegularAttack()
-        };
+    IAttackStrategy baseAttack = attackType switch
+    {
+        "smallbomb" => new SmallBombAttack(),
+        "bigbomb" => new BigBombAttack(),
+        "megabomb" => new MegaBombAttack(),
+        _ => new RegularAttack()
+    };
 
-        await MakeMove(gameId, playerId, row, col, attackStrategy);
+    // Dynamically add decorators
+    IAttackStrategy decoratedAttack = new LoggingDecorator(baseAttack);
+    if (attackType == "bigbomb" || attackType == "megabomb")
+    {
+        decoratedAttack = new SplashDamageDecorator(decoratedAttack);
+    }
+    if (attackType == "smallbomb") // Example: specific player has double damage
+    {
+        decoratedAttack = new DoubleDamageDecorator(decoratedAttack);
+    }
+
+    await MakeMove(gameId, playerId, row, col, decoratedAttack);
     }
 
     private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
