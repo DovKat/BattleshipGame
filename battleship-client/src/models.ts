@@ -49,6 +49,7 @@ export interface EGame {
     state: string; 
     currentTurn: string
     currentPlayerIndex: number
+    mode: string
 }
 
 

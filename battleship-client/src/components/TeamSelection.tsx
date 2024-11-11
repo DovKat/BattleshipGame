@@ -11,7 +11,6 @@ interface TeamSelectionProps {
 const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPlayerId }) => {
     const signalRContext = useContext(SignalRContext);
     const [game, setGame] = useState<Game | null>(null);
-    const [waitingMessage, setWaitingMessage] = useState<string>('Join a team to start!');
     const [teamPlayers, setTeamPlayers] = useState<{ [key: string]: Player[] }>({ Red: [], Blue: [] });
     const [playerName, setPlayerName] = useState<string>('');
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -19,6 +18,8 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
     const [error, setError] = useState<string | null>(null);
     const [playerId, setPlayerId] = useState<string | null>(null);
     const [gameId, setGameId] = useState<string>('game-1');
+    const [gameMode, setGameMode] = useState<'standard' | 'tournament'>('standard'); // Track game mode
+    const [waitingMessage, setWaitingMessage] = useState<string>('Join a team to start!');
 
     useEffect(() => {
         if (signalRContext?.connection) {
@@ -38,6 +39,7 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
             connection.on("GameStarted", (startedGame: Game) => {
                 if (startedGame.gameId === gameId) {
                     setGame(startedGame);
+                    setWaitingMessage("Game has started!"); // Notify that the game has started
                 }
             });
 
@@ -60,7 +62,7 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
             const playerId = uuidv4();
             const gameId = "game-1";
 
-            signalRContext.connection.invoke("JoinTeam", gameId, team, playerName, playerId)
+            signalRContext.connection.invoke("JoinTeam", gameId, team, playerName, playerId, gameMode)
                 .then(() => {
                     setSelectedTeam(team);
                     setPlayerId(playerId);
@@ -70,15 +72,27 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
         }
     };
 
-    const isGameInProgress = game ? game.state === "InProgress" : false;
+    const isTournamentMode = gameMode === 'tournament'; // Check if it's tournament mode
 
     return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>2v2 Battleship Game</h1>
 
-            {!isGameInProgress && !selectedTeam ? (
+            {/* Show the game mode selector before joining a team */}
+            {!selectedTeam && !playerId ? (
                 <div>
-                    <h2>Select a Team</h2>
+                    <h2>Select Game Mode</h2>
+                    <select 
+                        value={gameMode}
+                        onChange={(e) => setGameMode(e.target.value as 'standard' | 'tournament')}
+                        aria-label="Select Game Mode"
+                    >
+                        <option value="standard">Standard Mode</option>
+                        <option value="tournament">Tournament Mode</option>
+                    </select>
+
+                    {/* Player Name input */}
+                    <h3>Enter Your Name</h3>
                     <input
                         type="text"
                         placeholder="Enter your name"
@@ -87,6 +101,8 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
                         style={{ margin: "10px", padding: "10px" }}
                         aria-label="Player Name"
                     />
+
+                    {/* Team selection */}
                     <div>
                         <TeamButton 
                             team="Red" 
@@ -101,13 +117,14 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPla
                             onClick={joinTeam} 
                         />
                     </div>
+
                     {error && <p style={{ color: 'red' }}>{error}</p>}
                 </div>
             ) : (
                 <TeamStatus 
                     waitingMessage={waitingMessage} 
                     teamPlayers={teamPlayers} 
-                    isGameInProgress={isGameInProgress} 
+                    isTournamentMode={isTournamentMode} 
                     playerId={playerId} // Pass player ID to status
                 />
             )}
@@ -136,11 +153,11 @@ const TeamButton: React.FC<TeamButtonProps> = ({ team, playersCount, isLoading, 
 interface TeamStatusProps {
     waitingMessage: string;
     teamPlayers: { [key: string]: Player[] };
-    isGameInProgress: boolean;
+    isTournamentMode: boolean;
     playerId: string | null;
 }
 
-const TeamStatus: React.FC<TeamStatusProps> = ({ waitingMessage, teamPlayers, isGameInProgress, playerId }) => (
+const TeamStatus: React.FC<TeamStatusProps> = ({ waitingMessage, teamPlayers, isTournamentMode, playerId }) => (
     <div>
         <h2>{waitingMessage}</h2>
         {playerId && <p>Your Player ID: {playerId}</p>}
@@ -160,8 +177,10 @@ const TeamStatus: React.FC<TeamStatusProps> = ({ waitingMessage, teamPlayers, is
                 ))}
             </ul>
         </div>
-        {isGameInProgress && (
-            <p>The game has started! Get ready to play.</p>
+        {isTournamentMode ? (
+            <p>Welcome to the tournament! Ready your team!</p>
+        ) : (
+            <p>Standard mode is ready to go!</p>
         )}
     </div>
 );

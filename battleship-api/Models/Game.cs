@@ -6,7 +6,7 @@ public class Game
     public string State { get; set; } = "Waiting";
     public string CurrentTurn { get; set; } // Track which team is playing
     public int CurrentPlayerIndex { get; set; } // Track the player index within the team
-
+    public string GameMode { get; set; }
     public Game()
     {
         Teams = new List<Team>();

@@ -1,26 +1,32 @@
-namespace battleship_api.Builder;
-
-public class TournamentGameBuilder : IGameBuilder
+namespace battleship_api.Builder
 {
-    private Game _game = new Game();
-
-    public void SetGameId(string gameId)
+    public class TournamentGameBuilder : IGameBuilder
     {
-        _game.GameId = gameId;
-    }
+        private Game _game = new Game();
 
-    public void SetTeams(List<Team> teams)
-    {
-        _game.Teams = teams;
-    }
+        public void SetGameId(string gameId)
+        {
+            _game.GameId = gameId;
+        }
 
-    public void SetState(string state)
-    {
-        _game.State = state == "Waiting" ? "Tournament" : state; // Specific setup for tournaments
-    }
+        public void SetTeams(List<Team> teams)
+        {
+            _game.Teams = teams;
+        }
 
-    public Game Build()
-    {
-        return _game;
+        public void SetState(string state)
+        {
+            _game.State = state == "Waiting" ? "Tournament" : state; // Specific setup for tournaments
+        }
+
+        public void SetMode()
+        {
+            _game.GameMode = "Tournament";
+        }
+
+        public Game Build()
+        {
+            return _game;
+        }
     }
 }

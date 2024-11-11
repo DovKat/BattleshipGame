@@ -17,7 +17,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const [game, setGame] = useState<EGame | null>(null);
     const [scores, setScores] = useState<{ [key: string]: number }>({});
     const [selectedAttack, setSelectedAttack] = useState<string>("regular"); // Track selected attack type
-
+    let thisGameMode = "";
     const { connection } = useContext(SignalRContext)!;
     const currentPlayer = players.find(player => player.id === currentPlayerId);
     const currentTeam = currentPlayer?.team;
@@ -44,6 +44,18 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                 updateBoardCell(row, col, currentResult);
             }
         });
+        
+        connection?.on("ReceiveGameMode", function (gameMode) {
+            // Here, you can update the frontend UI with the received game mode.
+            console.log("Game Mode received: ", gameMode);
+            updateGameModeUI(gameMode);  // Update your UI accordingly
+        });
+        
+    
+        // Function to update UI based on the received game mode
+        function updateGameModeUI(gameMode: string) {
+            thisGameMode = gameMode
+        }
 
         connection?.on("ReceiveUpdatedScore", (playerId: string, score: number) => {
             setScores(prevScores => ({
@@ -54,12 +66,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
 
         return () => {
             connection?.off("GameStarted");
-            connection?.off("UpdateGameState");
             connection?.off("MoveResult");
             connection?.off("ReceiveUpdatedScore");
         };
     }, [connection, currentTeam]);
-
 
     function updateBoardCell(row: number, col: number, result: "Hit" | "Miss" | "Sunk") {
         const cell = document.getElementById(`cell-${row}-${col}`);
@@ -101,7 +111,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                             targetPlayer.board.grid[result.row][result.col].isHit = result.hit === 'hit';
                             targetPlayer.board.grid[result.row][result.col].isMiss = result.hit === 'miss';
                         }
-                        
                     }
                     return updatedGame;
                 });
@@ -138,23 +147,23 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
 
     return (
         <div className="game-board-container">
-            <h2>Game Board</h2>
+            <h2>Game Board for {game?.mode} mode</h2>
             {gameStarted && <p>The game has started!</p>}
             {isCurrentTurn ? (
+                <>
                 <p>It's your turn!</p>
+                {game?.mode !== 'Tournament' && (
+                    <div className="attack-buttons">
+                        <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
+                        <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
+                        <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
+                        <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
+                        <p>Selected Attack: {selectedAttack}</p>
+                    </div>
+                )}
+                </>
             ) : (
                 <p>Waiting for {game?.currentTurn} to play...</p>
-            )}
-
-            {/* Attack Selection Buttons for the Attacking Player */}
-            {isCurrentTurn && (
-                <div className="attack-buttons">
-                    <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
-                    <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
-                    <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
-                    <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
-                    <p>Selected Attack: {selectedAttack}</p>
-                </div>
             )}
 
             <div className="boards-container">
