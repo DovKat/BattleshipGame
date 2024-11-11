@@ -206,9 +206,10 @@ public class GameHub : Hub, IGameObserver
     {
         if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
         {
+            var commandManager = GetCommandManagerForPlayer(gameId, playerId);
             var shipFactory = new ShipFactory();
             var randomPlacer = new RandomShipPlacer(shipFactory, boardSize: 10);
-            randomPlacer.FillBoardWithRandomShips(player.Board);
+            randomPlacer.FillBoardWithRandomShips(player.Board, commandManager);
             await Clients.Caller.SendAsync("ShipPlaced", player.Board); // Send updated board to player
             await Clients.Group(gameId).SendAsync("UpdateGameState", game); // Notify all clients in the group of the update
         }

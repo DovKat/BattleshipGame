@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using backend.ShipFactory;
+using battleship_api.Command;
 
 public class RandomShipPlacer
 {
@@ -15,7 +17,7 @@ public class RandomShipPlacer
         _random = new Random();
     }
 
-    public void FillBoardWithRandomShips(Board board)
+    public void FillBoardWithRandomShips(Board board, CommandManager manager)
     {
         var shipTypes = new List<string> { "Destroyer", "Submarine", "Cruiser", "Battleship", "Carrier" };
         foreach (var shipType in shipTypes)
@@ -41,7 +43,9 @@ public class RandomShipPlacer
                 {
                     ship.Coordinates = shipCoordinates;
                     ship.Orientation = orientation;
-                    PlaceShipOnBoard(board, ship);
+                    var placeCommand = new PlaceShipCommand(board, ship, shipCoordinates);
+                    manager.ExecuteCommand(placeCommand);
+                    //PlaceShipOnBoard(board, ship);
                     placed = true;
                 }
             }
