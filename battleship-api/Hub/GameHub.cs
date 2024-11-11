@@ -17,6 +17,7 @@ using battleship_api.Command;
 using battleship_api.Strategy.Decorator;
 using battleship_api.Strategy;
 using battleship_api.Bridge;
+using battleship_api.Adapter;
 
 
 public class GameHub : Hub, IGameObserver
@@ -452,6 +453,12 @@ public class GameHub : Hub, IGameObserver
 
     public async Task UpdatePlayerScore(string playerID, string hitResult, string gameId, string attackType)
     {
+        //ExternalStatsTracker externalTracker = new ExternalStatsTracker();
+        //IPlayerStatsService statsService = new StatsTrackerAdapter(externalTracker);
+
+        //// This call will use the Adapter to interact with ExternalStatsTracker
+        //statsService.UpdateStats("Player1", score: 200, hits: 5, misses: 2);
+
         int playerScore = GameManager.Instance.GetPlayerScore(playerID);
         int points = _scoringSystem.CalculateScore(hitResult);
 
