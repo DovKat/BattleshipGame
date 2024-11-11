@@ -16,6 +16,7 @@ using battleship_api.Command;
 
 using battleship_api.Strategy.Decorator;
 using battleship_api.Strategy;
+using battleship_api.Bridge;
 
 
 public class GameHub : Hub, IGameObserver
@@ -28,6 +29,7 @@ public class GameHub : Hub, IGameObserver
 
     private static readonly Dictionary<string, string> _gameModes = new Dictionary<string, string>(); // Stores selected game modes per gameId
     private static string selectedMode = "";
+    private static IScoringSystem _scoringSystem;
 
     public GameHub(ILogger<GameHub> logger)
     {
@@ -120,10 +122,12 @@ public class GameHub : Hub, IGameObserver
         selectedMode = gameMode;
         if (gameMode == "tournament")
         {
+            _scoringSystem = new TournamentScoringSystem(1);
             return CreateTournamentNewGame(gameId);
         }
         else
         {
+            _scoringSystem = new StandardScoringSystem();
             return CreateStandartNewGame(gameId);
         }
     }
@@ -446,19 +450,10 @@ public class GameHub : Hub, IGameObserver
         }
     }
 
-    public async Task UpdatePlayerScore(string playerID, string hitResult, string gameId)
+    public async Task UpdatePlayerScore(string playerID, string hitResult, string gameId, string attackType)
     {
         int playerScore = GameManager.Instance.GetPlayerScore(playerID);
-        int points = 0;
-
-        if (hitResult == "Hit")
-        {
-            points = 50;
-        }
-        else if (hitResult == "Sunk")
-        {
-            points = 100;
-        }
+        int points = _scoringSystem.CalculateScore(hitResult);
 
         GameManager.Instance.UpdatePlayerScore(playerID, points);
 
@@ -469,7 +464,7 @@ public class GameHub : Hub, IGameObserver
             points, 
             hitResult);
 
-        Console.WriteLine($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
+        await Console.Out.WriteLineAsync($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
     }
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {

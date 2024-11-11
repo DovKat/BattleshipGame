@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Numerics;
 using backend.ShipFactory;
 using battleship_api.Command;
+using Newtonsoft.Json.Bson;
 
 public class RandomShipPlacer
 {
@@ -49,6 +51,14 @@ public class RandomShipPlacer
                     placed = true;
                 }
             }
+        }
+    }
+
+    private void clearBoard(Board board, CommandManager manager)
+    {
+        foreach (var ship in board.Ships)
+        {
+            manager.UndoLastCommand();
         }
     }
 
