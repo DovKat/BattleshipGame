@@ -9,6 +9,7 @@ using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
+using battleship_api.Strategy.Decorator;
 using battleship_api.Strategy;
 
 public class GameHub : Hub, IGameObserver
@@ -80,7 +81,11 @@ public class GameHub : Hub, IGameObserver
                 _games[gameId] = game;
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, gameId); // Add player to the game-specific group
+                
                 game.PlayerJoined(player);
+                
+                //await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams); // Update only players in this game
+               // await Clients.Group(gameId).SendAsync("PlayerJoined", player);
 
                 await CheckStartGame(game);
             }
@@ -261,6 +266,55 @@ public class GameHub : Hub, IGameObserver
 
         return coordinates;
     }
+    public async Task PlaceRandomShipsForDemo(string gameId)
+{
+    if (_games.TryGetValue(gameId, out var game))
+    {
+        var random = new Random();
+        var shipTypes = new List<string> { "Carrier", "Battleship", "Destroyer", "Submarine", "PatrolBoat" };
+        
+        foreach (var team in game.Teams)
+        {
+            foreach (var player in team.Players)
+            {
+                foreach (var shipType in shipTypes)
+                {
+                    ShipFactory shipFactory = new ShipFactory();
+                    var newShip = shipFactory.CreateShip(shipType);
+                    
+                    bool placed = false;
+                    while (!placed)
+                    {
+                        int row = random.Next(0, 10);
+                        int col = random.Next(0, 10);
+                        string orientation = random.Next(0, 2) == 0 ? "horizontal" : "vertical";
+                        var startCoordinate = new Coordinate { Row = row, Column = col };
+                        var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
+
+                        if (IsPlacementValid(player.Board, shipCoordinates))
+                        {
+                            newShip.Coordinates = shipCoordinates;
+                            newShip.Orientation = orientation;
+                            newShip.isPlaced = true;
+                            player.Board.Ships.Add(newShip);
+
+                            foreach (var coord in shipCoordinates)
+                            {
+                                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+                            }
+
+                            placed = true;
+                        }
+                    }
+                }
+
+                await Clients.Client(player.Id).SendAsync("ShipPlacementComplete", player.Board);
+            }
+        }
+        
+        await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+    }
+}
     private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
         foreach (var coord in coordinates)
@@ -357,15 +411,26 @@ public class GameHub : Hub, IGameObserver
     }
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {
-        IAttackStrategy attackStrategy = attackType switch
-        {
-            "smallbomb" => new SmallBombAttack(),
-            "bigbomb" => new BigBombAttack(),
-            "megabomb" => new MegaBombAttack(),
-            _ => new RegularAttack()
-        };
+    IAttackStrategy baseAttack = attackType switch
+    {
+        "smallbomb" => new SmallBombAttack(),
+        "bigbomb" => new BigBombAttack(),
+        "megabomb" => new MegaBombAttack(),
+        _ => new RegularAttack()
+    };
 
-        await MakeMove(gameId, playerId, row, col, attackStrategy);
+    // Dynamically add decorators
+    IAttackStrategy decoratedAttack = new LoggingDecorator(baseAttack);
+    if (attackType == "bigbomb" || attackType == "megabomb")
+    {
+        decoratedAttack = new SplashDamageDecorator(decoratedAttack);
+    }
+    if (attackType == "smallbomb") // Example: specific player has double damage
+    {
+        decoratedAttack = new DoubleDamageDecorator(decoratedAttack);
+    }
+
+    await MakeMove(gameId, playerId, row, col, decoratedAttack);
     }
 
     private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
