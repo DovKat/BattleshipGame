@@ -77,3 +77,6 @@ Komandos nariai:
 
 7. Sąsajos naudojimas:
    - Vartotojo sąsaja turi būti aiški ir lengvai suprantama, leidžiant žaidėjams patogiai sąveikauti su sistema.
+8. Paleidimas:
+   - npm start (battleship-client folderyje) jeigu reikia npm i pries tai
+   - dotnet run (battleship-api folderyje)

@@ -9,8 +9,13 @@ using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
-using battleship_api.Strategy;
+
+
 using battleship_api.Command;
+
+
+using battleship_api.Strategy.Decorator;
+using battleship_api.Strategy;
 
 
 public class GameHub : Hub, IGameObserver
@@ -18,7 +23,12 @@ public class GameHub : Hub, IGameObserver
     private readonly ILogger<GameHub> _logger;
     private readonly Dictionary<string, AbstractFactory> _teamShipFactories;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
+
     private static readonly Dictionary<string, CommandManager> _commandManagers = new Dictionary<string, CommandManager>();
+
+    private static readonly Dictionary<string, string> _gameModes = new Dictionary<string, string>(); // Stores selected game modes per gameId
+    private static string selectedMode = "";
+
     public GameHub(ILogger<GameHub> logger)
     {
         _teamShipFactories = new Dictionary<string, AbstractFactory>
@@ -50,14 +60,19 @@ public class GameHub : Hub, IGameObserver
         }
     }
 
-
-    public async Task JoinTeam(string gameId, string team, string playerName, string playerId)
+    public async Task JoinTeam(string gameId, string team, string playerName, string playerId, string gameMode)
     {
         try
         {
-            Console.WriteLine($"JoinTeam called with gameId: {gameId}, team: {team}, playerName: {playerName}, playerId: {playerId}");
-            
-            var game = _games.GetValueOrDefault(gameId) ?? CreateNewGame(gameId);
+            Console.WriteLine($"JoinTeam called with gameId: {gameId}, team: {team}, playerName: {playerName}, playerId: {playerId}, gameMode: {gameMode}");
+
+            // Ensure that the game exists
+            if (selectedMode != "")
+            {
+                gameMode = selectedMode;
+            }
+            var game = _games.GetValueOrDefault(gameId) ?? CreateGame(gameId, gameMode); // Pass gameMode here to create the correct game type
+            _logger.LogInformation("Selected mode {0}", gameMode);
             game.AddObserver(this);
 
             var playerTeam = game.Teams.FirstOrDefault(t => t.Name.Equals(team, StringComparison.OrdinalIgnoreCase));
@@ -70,7 +85,8 @@ public class GameHub : Hub, IGameObserver
             if (playerTeam.Players.Count < 2)
             {
 
-                var player  = CreateNewPlayer(playerId, playerName, team, InitializeBoard(), false);
+                var player = CreateNewPlayer(playerId, playerName, team, InitializeBoard(), false);
+
                 player.IsReady = false;
                 playerTeam.Players.Add(player);
                 game.Players[playerId] = player;
@@ -98,8 +114,38 @@ public class GameHub : Hub, IGameObserver
         }
     }
 
+
+    public Game CreateGame(string gameId, string gameMode)
+    {
+        selectedMode = gameMode;
+        if (gameMode == "tournament")
+        {
+            return CreateTournamentNewGame(gameId);
+        }
+        else
+        {
+            return CreateStandartNewGame(gameId);
+        }
+    }
+
     // Method to create a new game
-    public Game CreateNewGame(string gameId)
+    public Game CreateTournamentNewGame(string gameId)
+    {
+        IGameBuilder gameBuilder = new TournamentGameBuilder();
+        gameBuilder.SetGameId(gameId);
+        gameBuilder.SetTeams(new List<Team>
+        {
+            new Team { Name = "Red", Players = new List<Player>() },
+            new Team { Name = "Blue", Players = new List<Player>() }
+        });
+        gameBuilder.SetState("Waiting");
+        gameBuilder.SetMode();
+        var game = gameBuilder.Build();
+        _games[gameId] = game;
+        return game;
+    }
+    public Game CreateStandartNewGame(string gameId)
+
     {
         IGameBuilder gameBuilder = new StandardGameBuilder();
         gameBuilder.SetGameId(gameId);
@@ -124,34 +170,7 @@ public class GameHub : Hub, IGameObserver
 
         return playerBuilder.Build();
     }
-    public async Task StartDemoGame(string gameId)
-    {
-        var game = CreateNewGame(gameId);
-    
-        // Add players to teams with pre-defined IDs and names
-        var player1 = CreateNewPlayer("P1", "DemoPlayer1", "Red", InitializeBoard());
-        var player2 = CreateNewPlayer("P2", "DemoPlayer2", "Red", InitializeBoard());
-        var player3 = CreateNewPlayer("P3", "DemoPlayer3", "Blue", InitializeBoard());
-        var player4 = CreateNewPlayer("P4", "DemoPlayer4", "Blue", InitializeBoard());
-
-        game.Teams[0].Players.Add(player1);
-        game.Teams[0].Players.Add(player2);
-        game.Teams[1].Players.Add(player3);
-        game.Teams[1].Players.Add(player4);
-
-        game.Players[player1.Id] = player1;
-        game.Players[player2.Id] = player2;
-        game.Players[player3.Id] = player3;
-        game.Players[player4.Id] = player4;
-
-        _games[gameId] = game;
-        await PlaceRandomShipsForDemo(gameId);
-        
-        await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams);
-        await Clients.Group(gameId).SendAsync("GameStarted", game);
-        
-        game.State = "InProgress";
-    }
+  
     public async Task SetPlayerReady(string gameId, string playerId)
     {
         Console.WriteLine($"SetPlayerReady called with GameId: {gameId}, PlayerId: {playerId}");
@@ -204,6 +223,7 @@ public class GameHub : Hub, IGameObserver
     {
         if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
         {
+
             var commandManager = GetCommandManagerForPlayer(gameId, playerId);
 
             // Determine the correct factory based on the team
@@ -233,6 +253,7 @@ public class GameHub : Hub, IGameObserver
             }
 
             newShip.Coordinates = shipCoordinates;
+
             newShip.isPlaced = true;    
             //player.Board.Ships.Add(newShip);
 
@@ -254,6 +275,7 @@ public class GameHub : Hub, IGameObserver
             await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
         }
     }
+
 
     public async Task UndoLastPlacement(string gameId, string playerId)
     {
@@ -290,6 +312,7 @@ public class GameHub : Hub, IGameObserver
         }
         return commandManager;
     }
+
 
 
     private List<Coordinate> CalculateShipCoordinates(Coordinate start, int length, string orientation)
@@ -377,20 +400,27 @@ public class GameHub : Hub, IGameObserver
     // Method to check if the game can start
     private async Task CheckStartGame(Game game)
     {
-        Console.WriteLine($"Checking if game {game.GameId} can start...");
+
         if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
         {
             game.State = "InProgress";
-            game.CurrentTurn = "Red";
+            game.CurrentTurn = "Red";  // Assuming Red team starts
             game.CurrentPlayerIndex = 0;
-            await Clients.Group(game.GameId).SendAsync("GameStarted", game);
+
+            foreach (var team in game.Teams)
+            {
+                foreach (var p in team.Players)
+                {
+                    await Clients.Client(p.Id).SendAsync("GameStarted", p.Board);
+                    //await Clients.Caller.SendAsync("ReceiveGameMode", selectedMode);
+
+                }
+            }
+
+            await Clients.Group(game.GameId).SendAsync("UpdateGameState", game);
             game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
         }
-
-        TestPrototypeCopying test = new TestPrototypeCopying();
-        test.StartTest();
     }
-
 
     // Method to handle player moves
     public async Task UpdatePlayerState(string gameId, Player playerState)
@@ -442,15 +472,28 @@ public class GameHub : Hub, IGameObserver
     }
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {
-        IAttackStrategy attackStrategy = attackType switch
-        {
-            "smallbomb" => new SmallBombAttack(),
-            "bigbomb" => new BigBombAttack(),
-            "megabomb" => new MegaBombAttack(),
-            _ => new RegularAttack()
-        };
 
-        await MakeMove(gameId, playerId, row, col, attackStrategy);
+    IAttackStrategy baseAttack = attackType switch
+    {
+        "smallbomb" => new SmallBombAttack(),
+        "bigbomb" => new BigBombAttack(),
+        "megabomb" => new MegaBombAttack(),
+        _ => new RegularAttack()
+    };
+
+    // Dynamically add decorators
+    IAttackStrategy decoratedAttack = new LoggingDecorator(baseAttack);
+    if (attackType == "bigbomb" || attackType == "megabomb")
+    {
+        decoratedAttack = new SplashDamageDecorator(decoratedAttack);
+    }
+    if (attackType == "smallbomb") // Example: specific player has double damage
+    {
+        decoratedAttack = new DoubleDamageDecorator(decoratedAttack);
+    }
+
+    await MakeMove(gameId, playerId, row, col, decoratedAttack);
+
     }
 
     private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
