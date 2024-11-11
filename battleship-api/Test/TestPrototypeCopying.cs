@@ -20,6 +20,6 @@ public class TestPrototypeCopying{
         Console.WriteLine($"Original Ship Coordinates HashCode: {originalShip.Coordinates.GetHashCode()}");
         Console.WriteLine($"Shallow Copy Ship Coordinates HashCode: {shallowCopyShip.Coordinates.GetHashCode()}");
         Console.WriteLine($"Deep Copy Ship Coordinates HashCode: {deepCopyShip.Coordinates.GetHashCode()}");
- main
+
     }
 }
