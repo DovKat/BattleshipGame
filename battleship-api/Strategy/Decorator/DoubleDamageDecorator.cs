@@ -7,7 +7,6 @@ public class DoubleDamageDecorator : AttackDecorator
     {
         var baseCoordinates = base.GetAffectedCoordinates(startCoordinate);
         Console.WriteLine("Applying double damage to affected coordinates.");
-        // Implement logic for double damage if needed
         return baseCoordinates;
     }
 }
