@@ -58,6 +58,21 @@ const Board: React.FC<BoardProps> = ({
                 )
             );
         });
+      
+        connection?.on("ShipPlacementUndone", (updatedBoard) => {
+        setLocalBoard(updatedBoard.grid);
+        setPlacedShips(updatedBoard.ships);
+        // Reset the 'isPlaced' status in the ships array
+        setShips((prevShips) =>
+          prevShips.map(
+            (ship) =>
+              // If the ship is in placedShips but not on updatedBoard.ships, it was just undone
+              updatedBoard.ships.some((s: Ship) => s.name === ship.name)
+                ? ship
+                : { ...ship, isPlaced: false } // Mark as not placed for the undone ship
+          )
+        );
+      });
 
         connection?.on("ShipPlacementFailed", (errorMessage) => {
             console.error("Ship placement failed:", errorMessage);
@@ -91,6 +106,17 @@ const Board: React.FC<BoardProps> = ({
             console.error("Error generating random ships:", error);
         }
     };
+  
+    const handleUndoPlacement = async () => {
+      if (placedShips.length !== 0) {
+        try {
+          await connection?.invoke("UndoLastPlacement", gameId, playerId);
+          console.log("Undo placement request sent");
+        } catch (error) {
+          console.error("Error undoing last placement:", error);
+        }
+      }
+    };
     
 
     return (
@@ -111,9 +137,12 @@ const Board: React.FC<BoardProps> = ({
                             <button onClick={() => setSelectedShip({ ...selectedShip, orientation: selectedShip.orientation === 'horizontal' ? 'vertical' : 'horizontal' })}>
                                 Change Orientation: {selectedShip.orientation}
                             </button>
-                            <button onClick={() => {}} style={{ marginLeft: '10px' }}>
+                            <button
+                                onClick={handleUndoPlacement}
+                                style={{ marginLeft: "10px" }}
+                              >
                                 Undo Last Placement
-                            </button>
+                          </button>
                         </div>
                     )}
                     <div>
@@ -161,6 +190,7 @@ const Board: React.FC<BoardProps> = ({
             )}
         </div>
     );
+
 };
 
 export default Board;

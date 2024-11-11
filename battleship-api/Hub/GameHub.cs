@@ -9,16 +9,26 @@ using backend.ShipFactory;
 using System.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
+
+
+using battleship_api.Command;
+
+
 using battleship_api.Strategy.Decorator;
 using battleship_api.Strategy;
+
 
 public class GameHub : Hub, IGameObserver
 {
     private readonly ILogger<GameHub> _logger;
     private readonly Dictionary<string, AbstractFactory> _teamShipFactories;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
+
+    private static readonly Dictionary<string, CommandManager> _commandManagers = new Dictionary<string, CommandManager>();
+
     private static readonly Dictionary<string, string> _gameModes = new Dictionary<string, string>(); // Stores selected game modes per gameId
     private static string selectedMode = "";
+
     public GameHub(ILogger<GameHub> logger)
     {
         _teamShipFactories = new Dictionary<string, AbstractFactory>
@@ -49,6 +59,7 @@ public class GameHub : Hub, IGameObserver
             // Add more cases as needed for different notifications
         }
     }
+
     public async Task JoinTeam(string gameId, string team, string playerName, string playerId, string gameMode)
     {
         try
@@ -73,7 +84,9 @@ public class GameHub : Hub, IGameObserver
 
             if (playerTeam.Players.Count < 2)
             {
+
                 var player = CreateNewPlayer(playerId, playerName, team, InitializeBoard(), false);
+
                 player.IsReady = false;
                 playerTeam.Players.Add(player);
                 game.Players[playerId] = player;
@@ -100,6 +113,7 @@ public class GameHub : Hub, IGameObserver
             await Clients.Caller.SendAsync("JoinTeamFailed", "An error occurred while joining the team.");
         }
     }
+
 
     public Game CreateGame(string gameId, string gameMode)
     {
@@ -131,6 +145,7 @@ public class GameHub : Hub, IGameObserver
         return game;
     }
     public Game CreateStandartNewGame(string gameId)
+
     {
         IGameBuilder gameBuilder = new StandardGameBuilder();
         gameBuilder.SetGameId(gameId);
@@ -155,7 +170,7 @@ public class GameHub : Hub, IGameObserver
 
         return playerBuilder.Build();
     }
-    
+  
     public async Task SetPlayerReady(string gameId, string playerId)
     {
         Console.WriteLine($"SetPlayerReady called with GameId: {gameId}, PlayerId: {playerId}");
@@ -208,6 +223,9 @@ public class GameHub : Hub, IGameObserver
     {
         if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
         {
+
+            var commandManager = GetCommandManagerForPlayer(gameId, playerId);
+
             // Determine the correct factory based on the team
             AbstractFactory shipFactory = player.Team == "Blue" ? new BlueTeamShipFactory() : new RedTeamShipFactory();
 
@@ -235,13 +253,18 @@ public class GameHub : Hub, IGameObserver
             }
 
             newShip.Coordinates = shipCoordinates;
-            newShip.isPlaced = true;
-            player.Board.Ships.Add(newShip);
 
-            foreach (var coord in shipCoordinates)
-            {
-                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
-            }
+            newShip.isPlaced = true;    
+            //player.Board.Ships.Add(newShip);
+
+            //foreach (var coord in shipCoordinates)
+            //{
+            //    player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+            //}
+
+            var placeCommand = new PlaceShipCommand(player.Board, newShip, shipCoordinates);
+            commandManager.ExecuteCommand(placeCommand);
+
 
             await Clients.Caller.SendAsync("ShipPlaced", player.Board);
             await Clients.Group(gameId).SendAsync("UpdateGameState", game);
@@ -252,6 +275,45 @@ public class GameHub : Hub, IGameObserver
             await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
         }
     }
+
+
+    public async Task UndoLastPlacement(string gameId, string playerId)
+    {
+        if (_games.TryGetValue(gameId, out var game) && game.Players.TryGetValue(playerId, out var player))
+        {
+            var commandManager = GetCommandManagerForPlayer(gameId, playerId);
+            if (commandManager.HasCommands())
+            {
+                commandManager.UndoLastCommand();
+
+                await Clients.Caller.SendAsync("ShipPlacementUndone", player.Board);
+                await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+            }
+            else
+            {
+                await Clients.Caller.SendAsync("ShipPlacementFailed", "No actions to undo.");
+            }
+        }
+        else
+        {
+            await Clients.Caller.SendAsync("ShipPlacementFailed", "Game or player not found.");
+        }
+    }
+
+
+
+    private CommandManager GetCommandManagerForPlayer(string gameId, string playerId)
+    {
+        var key = $"{gameId}-{playerId}";
+        if (!_commandManagers.TryGetValue(key, out var commandManager))
+        {
+            commandManager = new CommandManager();
+            _commandManagers[key] = commandManager; // Store the CommandManager persistently
+        }
+        return commandManager;
+    }
+
+
 
     private List<Coordinate> CalculateShipCoordinates(Coordinate start, int length, string orientation)
     {
@@ -338,6 +400,7 @@ public class GameHub : Hub, IGameObserver
     // Method to check if the game can start
     private async Task CheckStartGame(Game game)
     {
+
         if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
         {
             game.State = "InProgress";
@@ -358,8 +421,6 @@ public class GameHub : Hub, IGameObserver
             game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
         }
     }
-
-
 
     // Method to handle player moves
     public async Task UpdatePlayerState(string gameId, Player playerState)
@@ -411,6 +472,7 @@ public class GameHub : Hub, IGameObserver
     }
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {
+
     IAttackStrategy baseAttack = attackType switch
     {
         "smallbomb" => new SmallBombAttack(),
@@ -431,6 +493,7 @@ public class GameHub : Hub, IGameObserver
     }
 
     await MakeMove(gameId, playerId, row, col, decoratedAttack);
+
     }
 
     private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
