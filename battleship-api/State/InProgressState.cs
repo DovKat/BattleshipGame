@@ -8,6 +8,7 @@ public class InProgressState : IGameState
 
     public async Task PauseGame(Game game, GameHub hub)
     {
+        game.State = "Paused";
         game.GameState = new PausedState(); // Transition to Paused
         await hub.Clients.Group(game.GameId).SendAsync("GamePaused", game);
     }
@@ -16,6 +17,7 @@ public class InProgressState : IGameState
 
     public async Task EndGame(Game game, GameHub hub)
     {
+        game.State = "EndGame";
         game.GameState = new CompletedState(); // Transition to Completed
         await hub.Clients.Group(game.GameId).SendAsync("GameEnded", game);
     }

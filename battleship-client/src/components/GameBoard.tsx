@@ -18,14 +18,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const [scores, setScores] = useState<{ [key: string]: number }>({});
     const [selectedAttack, setSelectedAttack] = useState<string>("regular"); // Track selected attack type
     let thisGameMode = "";
+    const [isPauseButtonVisible, setPauseButtonVisible] = useState(true);
+    const [isResumeButtonVisible, setResumeButtonVisible] = useState(false);
     const { connection } = useContext(SignalRContext)!;
     const currentPlayer = players.find(player => player.id === currentPlayerId);
     const currentTeam = currentPlayer?.team;
     const handlePause = async () => {
         try {
             await connection?.invoke("PauseGame", "game-1");
-            document.getElementById("pauseButton")!.style.display = "none";
-            document.getElementById("resumeButton")!.style.display = "inline";
+            setPauseButtonVisible(false);
+            setResumeButtonVisible(true);
         } catch (error) {
             console.error("Error pausing the game:", error);
         }
@@ -34,8 +36,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const handleResume = async () => {
         try {
             await connection?.invoke("ResumeGame", "game-1");
-            document.getElementById("resumeButton")!.style.display = "none";
-            document.getElementById("pauseButton")!.style.display = "inline";
+            setResumeButtonVisible(false);
+            setPauseButtonVisible(true);
         } catch (error) {
             console.error("Error resuming the game:", error);
         }
@@ -44,12 +46,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         connection?.on("GamePaused", (game: EGame) => {
             setGame(game);
             setIsCurrentTurn(false);
+            setPauseButtonVisible(false);
+            setResumeButtonVisible(true);
             console.log("Game is paused.");
         });
     
         connection?.on("GameResumed", (game: EGame) => {
             setGame(game);
             setIsCurrentTurn(game.currentTurn === currentTeam);
+            setPauseButtonVisible(true);
+            setResumeButtonVisible(false);
             console.log("Game has resumed.");
         });
     
@@ -184,104 +190,112 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     return (
         <div className="game-board-container">
             <h2>Game Board for {game?.mode} mode</h2>
-            {gameStarted && <p>The game has started!</p>}
-            {isCurrentTurn ? (
+            {game?.state === "InProgress" && isPauseButtonVisible && (
+                <button id="pauseButton" onClick={handlePause}>Pause Game</button>
+            )}
+            {/* Check if the game is paused */} 
+            {game?.state === "Paused" ? (
                 <>
-                <p>It's your turn!</p>
-                {game?.mode !== 'Tournament' && (
-                    <div className="attack-buttons">
-                        <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
-                        <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
-                        <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
-                        <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
-                        <p>Selected Attack: {selectedAttack}</p>
-                    </div>
-                )}
+                    <p>The game has been paused.</p>
+                    {isResumeButtonVisible && <button id="resumeButton" onClick={handleResume}>Resume Game</button>}
                 </>
             ) : (
-                <p>Waiting for {game?.currentTurn} to play...</p>
-            )}
-
-            <div className="boards-container">
-                <div className="board-row">
-                    {currentPlayer && (
+                <>
+                    {gameStarted && <p>The game has started!</p>}
+                    {isCurrentTurn ? (
                         <>
-                            <div key={currentPlayer.id} className="board-wrapper" style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
-                                <div className="board-title">{currentPlayer.name}'s Board</div>
-                                {game && game.state === "Paused" && (
-                                    <p>The game is currently paused.</p>
-                                )}
-                                <button id="pauseButton" onClick={handlePause}>Pause Game</button>
-                                <button id="resumeButton" style={{ display: "none" }} onClick={handleResume}>Resume Game</button>
-                                {currentPlayer.board && (
-                                    <Board
-                                        board={currentPlayer.board.grid}
-                                        isPlayerBoard={true}
-                                        isTeammateBoard={false}
-                                        onShipsPlaced={onShipsPlaced}
-                                        onShoot={undefined}
-                                        playerName={currentPlayer.name}
-                                        playerId={currentPlayer.id}
-                                        gameId="game-1"
-                                        score={scores[currentPlayer.id] || 0}
-                                        team={getTeamColor(currentPlayer.team)}
-                                    />
-                                )}
-                            </div>
-
-                            {teammate && (
-                                <div key={teammate.id} className="board-wrapper" style={{backgroundColor: getTeamColor(teammate.team)}}>
-                                    <div className="board-title">{teammate.name}'s Board</div>
-                                    {teammate.board && (
-                                        <Board
-                                            board={teammate.board.grid}
-                                            isPlayerBoard={false}
-                                            isTeammateBoard={true}
-                                            onShipsPlaced={undefined}
-                                            onShoot={undefined}
-                                            playerName={teammate.name}
-                                            playerId={teammate.id}
-                                            gameId="game-1"
-                                            score={scores[teammate.id] || 0}
-                                            team={getTeamColor(teammate.team)}
-                                        />
-                                    )}
+                            <p>It's your turn!</p>
+                            {game?.mode !== 'Tournament' && (
+                                <div className="attack-buttons">
+                                    <button onClick={() => setSelectedAttack("regular")}>Regular Attack</button>
+                                    <button onClick={() => setSelectedAttack("smallbomb")}>Small Bomb</button>
+                                    <button onClick={() => setSelectedAttack("bigbomb")}>Big Bomb</button>
+                                    <button onClick={() => setSelectedAttack("megabomb")}>Super Bomb</button>
+                                    <p>Selected Attack: {selectedAttack}</p>
                                 </div>
                             )}
                         </>
+                    ) : (
+                        <p>Waiting for {game?.currentTurn} to play...</p>
                     )}
-                </div>
-
-                <div className="board-row">
-                    {players.map((player) => {
-                        const isOpponentBoard = player.team !== currentTeam;
-                        const board = getPlayerBoard(player.id) || player.board;
-                        const score = scores[player.id] || 0;
-
-                        return (
-                            isOpponentBoard && (
-                                <div key={player.id} className="board-wrapper" style={{backgroundColor: getTeamColor(player.team)}}>
-                                    <div className="board-title">{player.name}'s Board</div>
-                                    {board && (
-                                        <Board
-                                            board={board.grid}
-                                            isPlayerBoard={false}
-                                            isTeammateBoard={false}
-                                            onShipsPlaced={undefined}
-                                            onShoot={isCurrentTurn ? (row, col) => handleShoot(row, col, player.id) : undefined}
-                                            playerName={player.name}
-                                            playerId={player.id}
-                                            gameId="game-1"
-                                            score={score}
-                                            team={getTeamColor(player.team)}
-                                        />
+    
+                    <div className="boards-container">
+                        <div className="board-row">
+                            {currentPlayer && (
+                                <>
+                                    <div key={currentPlayer.id} className="board-wrapper" style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
+                                        <div className="board-title">{currentPlayer.name}'s Board</div>
+                                        {currentPlayer.board && (
+                                            <Board
+                                                board={currentPlayer.board.grid}
+                                                isPlayerBoard={true}
+                                                isTeammateBoard={false}
+                                                onShipsPlaced={onShipsPlaced}
+                                                onShoot={undefined}
+                                                playerName={currentPlayer.name}
+                                                playerId={currentPlayer.id}
+                                                gameId="game-1"
+                                                score={scores[currentPlayer.id] || 0}
+                                                team={getTeamColor(currentPlayer.team)}
+                                            />
+                                        )}
+                                    </div>
+    
+                                    {teammate && (
+                                        <div key={teammate.id} className="board-wrapper" style={{backgroundColor: getTeamColor(teammate.team)}}>
+                                            <div className="board-title">{teammate.name}'s Board</div>
+                                            {teammate.board && (
+                                                <Board
+                                                    board={teammate.board.grid}
+                                                    isPlayerBoard={false}
+                                                    isTeammateBoard={true}
+                                                    onShipsPlaced={undefined}
+                                                    onShoot={undefined}
+                                                    playerName={teammate.name}
+                                                    playerId={teammate.id}
+                                                    gameId="game-1"
+                                                    score={scores[teammate.id] || 0}
+                                                    team={getTeamColor(teammate.team)}
+                                                />
+                                            )}
+                                        </div>
                                     )}
-                                </div>
-                            )
-                        );
-                    })}
-                </div>
-            </div>
+                                </>
+                            )}
+                        </div>
+    
+                        <div className="board-row">
+                            {players.map((player) => {
+                                const isOpponentBoard = player.team !== currentTeam;
+                                const board = getPlayerBoard(player.id) || player.board;
+                                const score = scores[player.id] || 0;
+    
+                                return (
+                                    isOpponentBoard && (
+                                        <div key={player.id} className="board-wrapper" style={{backgroundColor: getTeamColor(player.team)}}>
+                                            <div className="board-title">{player.name}'s Board</div>
+                                            {board && (
+                                                <Board
+                                                    board={board.grid}
+                                                    isPlayerBoard={false}
+                                                    isTeammateBoard={false}
+                                                    onShipsPlaced={undefined}
+                                                    onShoot={isCurrentTurn ? (row, col) => handleShoot(row, col, player.id) : undefined}
+                                                    playerName={player.name}
+                                                    playerId={player.id}
+                                                    gameId="game-1"
+                                                    score={score}
+                                                    team={getTeamColor(player.team)}
+                                                />
+                                            )}
+                                        </div>
+                                    )
+                                );
+                            })}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
