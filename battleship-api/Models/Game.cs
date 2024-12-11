@@ -1,3 +1,5 @@
+using battleship_api.State;
+
 public class Game
 {
     public string GameId { get; set; }
@@ -7,6 +9,12 @@ public class Game
     public string CurrentTurn { get; set; } // Track which team is playing
     public int CurrentPlayerIndex { get; set; } // Track the player index within the team
     public string GameMode { get; set; }
+    public IGameState GameState { get; set; } = new WaitingState(); // Default to Waiting
+
+    public async Task StartGame(GameHub hub) => await GameState.StartGame(this, hub);
+    public async Task PauseGame(GameHub hub) => await GameState.PauseGame(this, hub);
+    public async Task ResumeGame(GameHub hub) => await GameState.ResumeGame(this, hub);
+    public async Task EndGame(GameHub hub) => await GameState.EndGame(this, hub);
     public Game()
     {
         Teams = new List<Team>();

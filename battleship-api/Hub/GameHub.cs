@@ -106,10 +106,10 @@ public class GameHub : Hub, IGameObserver
                 
                 game.PlayerJoined(player);
                 
-                //await Clients.Group(gameId).SendAsync("UpdateTeams", game.Teams); // Update only players in this game
-               // await Clients.Group(gameId).SendAsync("PlayerJoined", player);
-
-                await CheckStartGame(game);
+                if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
+                {
+                    await game.StartGame(this);
+                }
             }
             else
             {
@@ -195,20 +195,7 @@ public class GameHub : Hub, IGameObserver
 
             if (game.Teams.All(t => t.Players.All(p => p.IsReady)))
             {
-                game.State = "InProgress";
-                game.CurrentTurn = "Red";  // Assuming Red team starts
-                game.CurrentPlayerIndex = 0;
-
-                foreach (var team in game.Teams)
-                {
-                    foreach (var p in team.Players)
-                    {
-                        await Clients.Client(p.Id).SendAsync("GameStarted", p.Board);
-                    }
-                }
-
-                await Clients.Group(gameId).SendAsync("UpdateGameState", game);
-                game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
+                await game.StartGame(this);
             }
         }
     }
@@ -408,33 +395,63 @@ public class GameHub : Hub, IGameObserver
         }
         return true;
     }
-
-    // Method to check if the game can start
-    private async Task CheckStartGame(Game game)
+    public async Task PauseGame(string gameId)
     {
-
-        if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
+        if (_games.TryGetValue(gameId, out var game))
         {
-            game.State = "InProgress";
-            game.CurrentTurn = "Red";  // Assuming Red team starts
-            game.CurrentPlayerIndex = 0;
-
-            foreach (var team in game.Teams)
+            try
             {
-                foreach (var p in team.Players)
-                {
-                    await Clients.Client(p.Id).SendAsync("GameStarted", p.Board);
-                    //await Clients.Caller.SendAsync("ReceiveGameMode", selectedMode);
-
-                }
+                _logger.LogInformation($"Attempting to pause game {gameId}.");
+                await game.GameState.PauseGame(game, this);
+                await Clients.Group(gameId).SendAsync("GamePaused", game);
             }
-
-            await Clients.Group(game.GameId).SendAsync("UpdateGameState", game);
-            game.NotifyObservers("GameStarted", game);  // Notify observers about the game starting
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, $"Pause failed for game {gameId}: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", ex.Message);
+            }
+        }
+        else
+        {
+            _logger.LogWarning($"Game {gameId} not found when attempting to pause.");
+            await Clients.Caller.SendAsync("Error", "Game not found.");
         }
     }
 
-    // Method to handle player moves
+    public async Task ResumeGame(string gameId)
+    {
+        if (_games.TryGetValue(gameId, out var game))
+        {
+            try
+            {
+                _logger.LogInformation($"Attempting to resume game {gameId}.");
+                await game.GameState.ResumeGame(game, this);
+                await Clients.Group(gameId).SendAsync("GameResumed", game);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, $"Resume failed for game {gameId}: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", ex.Message);
+            }
+        }
+        else
+        {
+            _logger.LogWarning($"Game {gameId} not found when attempting to resume.");
+            await Clients.Caller.SendAsync("Error", "Game not found.");
+        }
+    }
+
+    public async Task EndGame(string gameId)
+    {
+        if (_games.TryGetValue(gameId, out var game))
+        {
+            await game.EndGame(this);
+        }
+        else
+        {
+            await Clients.Caller.SendAsync("Error", "Game not found.");
+        }
+    }
     public async Task UpdatePlayerState(string gameId, Player playerState)
     {
         var game = _games.GetValueOrDefault(gameId);

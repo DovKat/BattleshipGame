@@ -21,7 +21,43 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
     const { connection } = useContext(SignalRContext)!;
     const currentPlayer = players.find(player => player.id === currentPlayerId);
     const currentTeam = currentPlayer?.team;
-
+    const handlePause = async () => {
+        try {
+            await connection?.invoke("PauseGame", "game-1");
+            document.getElementById("pauseButton")!.style.display = "none";
+            document.getElementById("resumeButton")!.style.display = "inline";
+        } catch (error) {
+            console.error("Error pausing the game:", error);
+        }
+    };
+    
+    const handleResume = async () => {
+        try {
+            await connection?.invoke("ResumeGame", "game-1");
+            document.getElementById("resumeButton")!.style.display = "none";
+            document.getElementById("pauseButton")!.style.display = "inline";
+        } catch (error) {
+            console.error("Error resuming the game:", error);
+        }
+    };
+    useEffect(() => {
+        connection?.on("GamePaused", (game: EGame) => {
+            setGame(game);
+            setIsCurrentTurn(false);
+            console.log("Game is paused.");
+        });
+    
+        connection?.on("GameResumed", (game: EGame) => {
+            setGame(game);
+            setIsCurrentTurn(game.currentTurn === currentTeam);
+            console.log("Game has resumed.");
+        });
+    
+        return () => {
+            connection?.off("GamePaused");
+            connection?.off("GameResumed");
+        };
+    }, [connection, currentTeam]);
     useEffect(() => {
         connection?.on("GameStarted", (gameState: EGame) => {
             setGameStarted(true);
@@ -172,6 +208,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
                         <>
                             <div key={currentPlayer.id} className="board-wrapper" style={{backgroundColor: getTeamColor(currentPlayer.team)}}>
                                 <div className="board-title">{currentPlayer.name}'s Board</div>
+                                {game && game.state === "Paused" && (
+                                    <p>The game is currently paused.</p>
+                                )}
+                                <button id="pauseButton" onClick={handlePause}>Pause Game</button>
+                                <button id="resumeButton" style={{ display: "none" }} onClick={handleResume}>Resume Game</button>
                                 {currentPlayer.board && (
                                     <Board
                                         board={currentPlayer.board.grid}
