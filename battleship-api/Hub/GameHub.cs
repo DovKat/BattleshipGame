@@ -22,6 +22,8 @@ using battleship_api.Adapter;
 
 public class GameHub : Hub, IGameObserver
 {
+    private readonly Dictionary<string, TurnProcessor> _turnProcessors = new();
+    
     private readonly ILogger<GameHub> _logger;
     private readonly Dictionary<string, AbstractFactory> _teamShipFactories;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
@@ -34,6 +36,8 @@ public class GameHub : Hub, IGameObserver
 
     public GameHub(ILogger<GameHub> logger)
     {
+        _turnProcessors["standard"] = new StandardTurnProcessor();
+        _turnProcessors["tournament"] = new TournamentTurnProcessor();
         _teamShipFactories = new Dictionary<string, AbstractFactory>
         {
             { "Blue", new BlueTeamShipFactory() },
@@ -41,6 +45,8 @@ public class GameHub : Hub, IGameObserver
         };
         _logger = logger;
     }
+    public Game GetGame(string gameId) => _games.GetValueOrDefault(gameId);
+    
     public async Task Update(Game game, string messageType, object data)
     {
         switch (messageType)
@@ -473,82 +479,30 @@ public class GameHub : Hub, IGameObserver
 
         await Console.Out.WriteLineAsync($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
     }
+    
     public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
     {
-
-    IAttackStrategy baseAttack = attackType switch
-    {
-        "smallbomb" => new SmallBombAttack(),
-        "bigbomb" => new BigBombAttack(),
-        "megabomb" => new MegaBombAttack(),
-        _ => new RegularAttack()
-    };
-
-    // Dynamically add decorators
-    IAttackStrategy decoratedAttack = new LoggingDecorator(baseAttack);
-    if (attackType == "bigbomb" || attackType == "megabomb")
-    {
-        decoratedAttack = new SplashDamageDecorator(decoratedAttack);
-    }
-    if (attackType == "smallbomb") // Example: specific player has double damage
-    {
-        decoratedAttack = new DoubleDamageDecorator(decoratedAttack);
-    }
-
-    await MakeMove(gameId, playerId, row, col, decoratedAttack);
-
-    }
-
-    private async Task MakeMove(string gameId, string playerId, int row, int col, IAttackStrategy attackStrategy)
-    {
-        if (_games.TryGetValue(gameId, out var game))
+        try
         {
-            var player = game.Players.GetValueOrDefault(playerId);
-            if (player == null || game.State != "InProgress" || game.CurrentTurn != player.Team)
+            if (_turnProcessors.TryGetValue(selectedMode, out var turnProcessor))
             {
-                await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
-                return;
+                // Process the turn
+                await turnProcessor.ProcessTurn(this, gameId, playerId, row, col, attackType);
             }
-    
-            var team = game.Teams.First(t => t.Name == player.Team);
-            if (team.Players[game.CurrentPlayerIndex].Id != playerId)
+            else
             {
-                await Clients.Caller.SendAsync("MoveNotAllowed", "It's not your turn.");
-                return;
+                Console.WriteLine("Invalid game mode.");
+                await Clients.Caller.SendAsync("Error", "Invalid game mode.");
             }
-    
-            var opponentTeam = game.Teams.First(t => t.Name != player.Team);
-    
-            // Get affected coordinates based on the attack strategy
-            var startCoordinate = new Coordinate { Row = row, Column = col };
-            var affectedCoordinates = attackStrategy.GetAffectedCoordinates(startCoordinate);
-    
-            // Log affected coordinates
-            _logger.LogInformation($"Player {playerId} attacked at ({row}, {col}) using {attackStrategy.GetType().Name}. Affected coordinates:");
-            foreach (var coord in affectedCoordinates)
-            {
-                _logger.LogInformation($"- Row: {coord.Row}, Column: {coord.Column}");
-            }
-    
-            foreach (var coord in affectedCoordinates)
-            {
-                if (coord.Row >= 0 && coord.Row < 10 && coord.Column >= 0 && coord.Column < 10) // Ensure within board bounds
-                {
-                    var hitResult = ProcessMove(opponentTeam, coord.Row, coord.Column);
-                    await Clients.Group(gameId).SendAsync("MoveResult", new { PlayerId = playerId, Row = coord.Row, Col = coord.Column, Result = hitResult });
-                }
-            }
-    
-            AdvanceTurn(game);
-            await Clients.Group(gameId).SendAsync("UpdateGameState", game);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in MakeMove: {ex.Message}");
+            await Clients.Caller.SendAsync("Error", $"An error occurred: {ex.Message}");
         }
     }
-
-
-
-
-
-    private string ProcessMove(Team opponentTeam, int row, int col)
+    
+    public string ProcessMove(Team opponentTeam, int row, int col)
     {
         foreach (var player in opponentTeam.Players)
         {
@@ -567,18 +521,15 @@ public class GameHub : Hub, IGameObserver
                 return "Hit";  // Ship is hit but not yet sunk
             }
         }
-
-        // If no ship was hit, mark it as a miss
         opponentTeam.Players.ForEach(player =>
         {
             var missedCell = player.Board.Grid[row][col];
             missedCell.IsMiss = true;  // Mark this cell as a miss
         });
-
         return "Miss";  // No ship, it's a miss
     }
 
-    private async void AdvanceTurn(Game game)
+    public async void AdvanceTurn(Game game)
     {
         var currentTeam = game.Teams.First(t => t.Name == game.CurrentTurn);
         game.CurrentPlayerIndex = (game.CurrentPlayerIndex + 1) % currentTeam.Players.Count;
@@ -587,10 +538,7 @@ public class GameHub : Hub, IGameObserver
         {
             game.CurrentTurn = game.CurrentTurn == "Red" ? "Blue" : "Red";
         }
-
         await Clients.Group(game.GameId).SendAsync("UpdateGameState", new { game.CurrentTurn, game.CurrentPlayerIndex });
-
-        Console.WriteLine($"Advanced turn: {game.CurrentTurn}, Current Player Index: {game.CurrentPlayerIndex}");
     }
 
 
