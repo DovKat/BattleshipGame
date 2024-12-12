@@ -10,52 +10,51 @@ interface TeamSelectionProps {
 
 const TeamSelection: React.FC<TeamSelectionProps> = ({ onTeamFull, setCurrentPlayerId }) => {
     const signalRContext = useContext(SignalRContext);
-    const [game, setGame] = useState<Game | null>(null);
     const [teamPlayers, setTeamPlayers] = useState<{ [key: string]: Player[] }>({ Red: [], Blue: [] });
     const [playerName, setPlayerName] = useState<string>('');
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
+    const [loading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [playerId, setPlayerId] = useState<string | null>(null);
-    const [gameId, setGameId] = useState<string>('game-1');
+    const [gameId] = useState<string>('game-1');
     const [gameMode, setGameMode] = useState<'standard' | 'tournament'>('standard'); // Track game mode
     const [waitingMessage, setWaitingMessage] = useState<string>('Join a team to start!');
-
+    
     useEffect(() => {
+        const checkIfTeamsFull = (updatedPlayers: { [key: string]: Player[] }) => {
+            if (updatedPlayers.Red.length === 2 && updatedPlayers.Blue.length === 2) {
+                const playerList = [...updatedPlayers.Red, ...updatedPlayers.Blue];
+                onTeamFull(playerList);
+            }
+        };
         if (signalRContext?.connection) {
             const connection = signalRContext.connection;
-
+    
             connection.on("UpdateTeams", (updatedTeams: Team[]) => {
                 const updatedPlayers: { [key: string]: Player[] } = { Red: [], Blue: [] };
-
+    
                 updatedTeams.forEach(team => {
                     updatedPlayers[team.name] = team.players;
                 });
-
+    
                 setTeamPlayers(updatedPlayers);
-                checkIfTeamsFull(updatedPlayers);
+                checkIfTeamsFull(updatedPlayers); // Safe to use as a dependency
             });
-
+    
             connection.on("GameStarted", (startedGame: Game) => {
                 if (startedGame.gameId === gameId) {
-                    setGame(startedGame);
-                    setWaitingMessage("Game has started!"); // Notify that the game has started
+                    setWaitingMessage("Game has started!");
                 }
             });
-
+    
             return () => {
                 connection.off("UpdateTeams");
                 connection.off("GameStarted");
             };
         }
-    }, [signalRContext, onTeamFull]);
+    }, [signalRContext,  gameId, onTeamFull]);
 
-    const checkIfTeamsFull = (updatedPlayers: { [key: string]: Player[] }) => {
-        if (updatedPlayers.Red.length === 2 && updatedPlayers.Blue.length === 2) {
-            const playerList = [...updatedPlayers.Red, ...updatedPlayers.Blue];
-            onTeamFull(playerList);
-        }
-    };
+   
 
     const joinTeam = (team: string) => {
         if (signalRContext?.connection && playerName.trim()) {
