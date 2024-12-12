@@ -16,7 +16,8 @@ builder.Services.AddCors(options =>
             .AllowCredentials()
             .WithExposedHeaders("Content-Length");
     });
-});
+})
+    .AddSignalR();
 
 var app = builder.Build();
 
