@@ -22,9 +22,12 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [game, setGame] = useState<Game | null>(null); 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl("https://battle-ship-api-bjb4g6bqhuaubcad.northeurope-01.azurewebsites.net/gameHub")
-            .withAutomaticReconnect()
-            .build();
+        .withUrl("https://battle-ship-api-bjb4g6bqhuaubcad.northeurope-01.azurewebsites.net/gameHub", {
+            transport: signalR.HttpTransportType.WebSockets,
+            withCredentials: true, // Include cookies or other credentials
+        })
+        .withAutomaticReconnect()
+        .build();
 
         setConnection(newConnection);
 
