@@ -6,7 +6,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowHost",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()
