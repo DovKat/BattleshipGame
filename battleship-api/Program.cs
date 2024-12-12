@@ -10,7 +10,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowHost", policy =>
     {
         policy
-            .WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net") // The origin of your frontend
+            .WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net") // Replace with your frontend URL
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
@@ -18,29 +18,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-builder.Services.AddSignalR();
-
 var app = builder.Build();
 
+// Apply CORS policy before other middleware
+app.UseCors("AllowHost");
 
-app.UseCors("AllowHost"); 
-
-
-
-app.UseHttpsRedirection();
+// Ensure routing comes after CORS middleware
 app.UseRouting();
 
-app.Use(async (context, next) =>
-{
-    if (context.Request.Method == "OPTIONS")
-    {
-        // Log or handle the OPTIONS request here if needed
-        Console.WriteLine("OPTIONS request received.");
-    }
-    await next.Invoke();
-});
-
+// SignalR hub mapping
 app.MapHub<GameHub>("/gameHub");
 
+// Run the app
 app.Run();
+
