@@ -23,7 +23,7 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-
+app.UseHttpsRedirection();
 app.UseCors("https://salmon-meadow-08f848403.4.azurestaticapps.net");
 
 app.Use(async (context, next) =>
