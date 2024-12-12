@@ -1,10 +1,6 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Register services
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowHost",
@@ -18,21 +14,19 @@ builder.Services.AddCors(options =>
         });
 });
 
-
 builder.Services.AddSignalR();
 
 var app = builder.Build();
 
+// Use middleware
 app.UseHttpsRedirection();
-app.UseCors("https://salmon-meadow-08f848403.4.azurestaticapps.net");
+app.UseCors("AllowHost");
 
 app.Use(async (context, next) =>
 {
-
     Console.WriteLine($"Request Path: {context.Request.Path}");
     await next.Invoke();
 });
-
 
 app.MapHub<GameHub>("/gameHub");
 
