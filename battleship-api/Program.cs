@@ -7,14 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowHost",
-        policy =>
-        {
-            policy.SetIsOriginAllowed(origin => 
-                                       new Uri(origin).Host == "https://salmon-meadow-08f848403.4.azurestaticapps.net/")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+    options.AddPolicy("AllowHost", policy =>
+    {
+        policy
+            .WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net") // The origin of your frontend
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .WithExposedHeaders("Content-Length");
+    });
 });
 
 
