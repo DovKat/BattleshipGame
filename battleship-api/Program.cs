@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost",
+    options.AddPolicy("AllowHost",
         policy =>
         {
             policy.SetIsOriginAllowed(origin => 
-                                       new Uri(origin).Host == "localhost")
+                                       new Uri(origin).Host == "https://salmon-meadow-08f848403.4.azurestaticapps.net/")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -24,7 +24,7 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 
-app.UseCors("AllowLocalhost"); 
+app.UseCors("AllowHost"); 
 
 app.Use(async (context, next) =>
 {
