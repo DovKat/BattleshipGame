@@ -10,11 +10,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowHost",
         policy =>
         {
-            policy.SetIsOriginAllowed(origin => 
-                                       new Uri(origin).Host == "https://salmon-meadow-08f848403.4.azurestaticapps.net/")
+            policy.WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowCredentials();
+                .AllowCredentials()
+                .WithExposedHeaders("Content-Length");
         });
 });
 
@@ -24,7 +24,7 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 
-app.UseCors("AllowHost"); 
+app.UseCors("https://salmon-meadow-08f848403.4.azurestaticapps.net");
 
 app.Use(async (context, next) =>
 {
