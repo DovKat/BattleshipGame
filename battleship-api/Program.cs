@@ -25,9 +25,20 @@ var app = builder.Build();
 
 app.UseCors("AllowHost"); 
 
+
+
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        // Log or handle the OPTIONS request here if needed
+        Console.WriteLine("OPTIONS request received.");
+    }
+    await next.Invoke();
+});
 
 app.MapHub<GameHub>("/gameHub");
 
