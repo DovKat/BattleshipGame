@@ -30,10 +30,7 @@ app.UseRouting();
 
 // SignalR hub mapping
 app.MapHub<GameHub>("/gameHub").RequireCors("AllowHost");
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapHub<GameHub>("/gameHub");
-});
+
 // Run the app
 app.Run();
 
