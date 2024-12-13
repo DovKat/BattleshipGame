@@ -10,7 +10,7 @@ builder.Services.AddCors(options =>
         options.AddPolicy("AllowHost", policy =>
         {
             policy
-                .WithOrigins("https://salmon-meadow-08f848403.4.azurestaticapps.net") // Replace with your frontend URL
+                .WithOrigins("https://white-flower-0ba0ec203.4.azurestaticapps.net") // Replace with your frontend URL
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()

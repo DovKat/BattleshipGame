@@ -26,7 +26,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl("https://battle-ship-api-bjb4g6bqhuaubcad.northeurope-01.azurewebsites.net/gameHub", {
+            .withUrl("https://battleship-api-cpeccsbcetgydabc.northeurope-01.azurewebsites.net/gameHub", {
                 transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling | signalR.HttpTransportType.ServerSentEvents,
                 withCredentials: true,
             })
