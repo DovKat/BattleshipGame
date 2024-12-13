@@ -22,12 +22,12 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Apply CORS policy before other middleware
-app.UseCors("AllowHost");
+
 
 app.UseHttpsRedirection();
 // Ensure routing comes after CORS middleware
 app.UseRouting();
-
+app.UseCors("AllowHost");
 // SignalR hub mapping
 app.MapHub<GameHub>("/gameHub").RequireCors("AllowHost");
 
