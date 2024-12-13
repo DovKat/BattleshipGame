@@ -5,4 +5,5 @@ public class Player
     public string Team { get; set; }
     public Board Board { get; set; }
     public bool IsReady { get; set; }
+    public string ConnectionId { get; set; }
 }

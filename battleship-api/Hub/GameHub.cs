@@ -1,29 +1,14 @@
 using Microsoft.AspNetCore.SignalR;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Text.Json;
-using Newtonsoft.Json;
 using backend.GameManager;
 using backend.ShipFactory;
-using System.Data;
-using System.ComponentModel.DataAnnotations.Schema;
 using battleship_api.Builder;
-
-
 using battleship_api.Command;
-
-
-using battleship_api.Strategy.Decorator;
-using battleship_api.Strategy;
 using battleship_api.Bridge;
-using battleship_api.Adapter;
-
 
 public class GameHub : Hub, IGameObserver
 {
     private readonly Dictionary<string, TurnProcessor> _turnProcessors = new();
-    
+    private static readonly Dictionary<string, DateTime> _lastHeartbeat = new();
     private readonly ILogger<GameHub> _logger;
     private readonly Dictionary<string, AbstractFactory> _teamShipFactories;
     private static readonly Dictionary<string, Game> _games = new Dictionary<string, Game>();
@@ -93,8 +78,11 @@ public class GameHub : Hub, IGameObserver
 
             if (playerTeam.Players.Count < 2)
             {
-
+                // Create new player
                 var player = CreateNewPlayer(playerId, playerName, team, InitializeBoard(), false);
+
+                // Store the ConnectionId in the player object
+                player.ConnectionId = Context.ConnectionId;  // Add ConnectionId here
 
                 player.IsReady = false;
                 playerTeam.Players.Add(player);
@@ -103,9 +91,9 @@ public class GameHub : Hub, IGameObserver
                 _games[gameId] = game;
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, gameId); // Add player to the game-specific group
-                
+
                 game.PlayerJoined(player);
-                
+
                 if (game.Teams.All(t => t.Players.Count == 2 && t.Players.All(p => p.IsReady)))
                 {
                     await game.StartGame(this);
@@ -122,6 +110,7 @@ public class GameHub : Hub, IGameObserver
             await Clients.Caller.SendAsync("JoinTeamFailed", "An error occurred while joining the team.");
         }
     }
+
 
 
     public Game CreateGame(string gameId, string gameMode)
@@ -446,6 +435,9 @@ public class GameHub : Hub, IGameObserver
         if (_games.TryGetValue(gameId, out var game))
         {
             await game.EndGame(this);
+            // Optionally remove the game after ending
+            _games.Remove(gameId);
+            _logger.LogInformation($"Game {gameId} has been removed after completion.");
         }
         else
         {
@@ -558,44 +550,6 @@ public class GameHub : Hub, IGameObserver
         await Clients.Group(game.GameId).SendAsync("UpdateGameState", new { game.CurrentTurn, game.CurrentPlayerIndex });
     }
 
-
-
-    // Method to get connection ID
-    public string GetConnectionId()
-    {
-        return Context.ConnectionId;
-    }
-
-    // Override for disconnection logic
-    public override async Task OnDisconnectedAsync(Exception? exception)
-    {
-        var playerToRemove = _games.Values
-            .SelectMany(g => g.Teams)
-            .SelectMany(t => t.Players)
-            .FirstOrDefault(p => p.Id == Context.ConnectionId);
-
-        if (playerToRemove != null)
-        {
-            var game = _games.Values.First(g => g.Teams.Any(t => t.Players.Contains(playerToRemove)));
-            
-            if (game != null)
-            {
-                game.RemoveObserver(this);
-            }
-            
-            var team = game.Teams.First(t => t.Name == playerToRemove.Team);
-            
-            team.Players.Remove(playerToRemove);
-            game.Players.Remove(playerToRemove.Id);
-
-
-            await Clients.Group(game.GameId).SendAsync("UpdateTeams", game.Teams);
-
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, game.GameId);
-        }
-        await base.OnDisconnectedAsync(exception);
-    }
-
     // Method to initialize a player's board
     private Board InitializeBoard()
     {
@@ -611,5 +565,59 @@ public class GameHub : Hub, IGameObserver
         return new Board { Grid = cells, Ships = new List<Ship>() };
     }
 
+    // Method to get connection ID
+    public string GetConnectionId()
+    {
+        return Context.ConnectionId;
+    }
+
+    #region CLEANUP
     
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _logger.LogInformation($"Player disconnected.");
+
+        // Find the player who is disconnecting using ConnectionId
+        var playerToRemove = _games.Values
+            .SelectMany(g => g.Teams)
+            .SelectMany(t => t.Players)
+            .FirstOrDefault(p => p.ConnectionId == Context.ConnectionId); // Match by ConnectionId
+
+        if (playerToRemove != null)
+        {
+            _logger.LogInformation($"Player disconnecting: {playerToRemove.Id}");
+
+            var game = _games.Values.First(g => g.Teams.Any(t => t.Players.Contains(playerToRemove)));
+
+            if (game != null)
+            {
+                game.RemoveObserver(this);
+                var team = game.Teams.First(t => t.Name == playerToRemove.Team);
+                team.Players.Remove(playerToRemove);
+                game.Players.Remove(playerToRemove.Id);
+
+                await Clients.Group(game.GameId).SendAsync("UpdateTeams", game.Teams);
+
+                // Remove player from group
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, game.GameId);
+
+                _logger.LogInformation($"Player disconnected. Checking if teams are empty: {game.Teams.All(t => t.Players.Count == 0)}");
+
+                // Cleanup the game if no players remain
+                if (game.Teams.All(t => t.Players.Count == 0))
+                {
+                    _games.Remove(game.GameId);
+                    _logger.LogInformation($"Game {game.GameId} has been removed due to all players disconnecting.");
+                }
+            }
+        }
+        else
+        {
+            _logger.LogWarning($"No player found for ConnectionId: {Context.ConnectionId}");
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    #endregion
 }
