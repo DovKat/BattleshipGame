@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { Cell, Ship, Coordinate, ShipE } from "../models"; // Ensure proper imports
+import { Cell, Ship } from "../models"; // Ensure proper imports
 import { SignalRContext } from "../contexts/SignalRContext";
 import "../style/GameBoard.css";
 

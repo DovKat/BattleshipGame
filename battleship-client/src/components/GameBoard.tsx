@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Player, GameState, Ship, Game, EGame } from '../models';
+import { Player, EGame } from '../models';
 import Board from './Board';
 import { SignalRContext } from '../contexts/SignalRContext';
 import '../style/GameBoard.css';
@@ -13,11 +13,9 @@ interface GameBoardProps {
 const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShipsPlaced }) => {
     const [gameStarted, setGameStarted] = useState(false);
     const [isCurrentTurn, setIsCurrentTurn] = useState(false);
-    const [gameState, setGameState] = useState<GameState | null>(null);
     const [game, setGame] = useState<EGame | null>(null);
     const [scores, setScores] = useState<{ [key: string]: number }>({});
     const [selectedAttack, setSelectedAttack] = useState<string>("regular"); // Track selected attack type
-    let thisGameMode = "";
     const [isPauseButtonVisible, setPauseButtonVisible] = useState(true);
     const [isResumeButtonVisible, setResumeButtonVisible] = useState(false);
     const { connection } = useContext(SignalRContext)!;
@@ -77,7 +75,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         });
 
         connection?.on("MoveResult", (moveResult) => {
-            const { playerId, affectedCoordinates, result } = moveResult;
+            const { affectedCoordinates, result } = moveResult;
         
             // This is where you handle multiple affected cells
             for (let i = 0; i < affectedCoordinates.length; i++) {
@@ -90,14 +88,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         connection?.on("ReceiveGameMode", function (gameMode) {
             // Here, you can update the frontend UI with the received game mode.
             console.log("Game Mode received: ", gameMode);
-            updateGameModeUI(gameMode);  // Update your UI accordingly
         });
         
-    
-        // Function to update UI based on the received game mode
-        function updateGameModeUI(gameMode: string) {
-            thisGameMode = gameMode
-        }
 
         connection?.on("ReceiveUpdatedScore", (playerId: string, score: number) => {
             setScores(prevScores => ({
