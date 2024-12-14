@@ -75,14 +75,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         });
 
         connection?.on("MoveResult", (moveResult) => {
-            const { affectedCoordinates, result } = moveResult;
+            const { PlayerId, Row, Col, Result } = moveResult;
         
-            // This is where you handle multiple affected cells
-            for (let i = 0; i < affectedCoordinates.length; i++) {
-                const { row, col } = affectedCoordinates[i];
-                const currentResult = result[i]; // Each result corresponds to a specific cell
-                updateBoardCell(row, col, currentResult);
-            }
+            // Update the correct board based on PlayerId
+            updateBoardCell(PlayerId, Row, Col, Result);
         });
         
         connection?.on("ReceiveGameMode", function (gameMode) {
@@ -105,47 +101,45 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         };
     }, [connection, currentTeam]);
 
-    function updateBoardCell(row: number, col: number, result: "Hit" | "Miss" | "Sunk") {
-        const cell = document.getElementById(`cell-${row}-${col}`);
+    function updateBoardCell(playerId: string, row: number, col: number, result: "Hit" | "Miss" | "Sunk") {
+        const cell = document.getElementById(`cell-${playerId}-${row}-${col}`); // Lookup cell by playerId
+        if (!cell) return;
+      
         if (result === "Hit") {
-            cell?.classList.add("hit");
+          cell.classList.add("isHit");
         } else if (result === "Sunk") {
-            cell?.classList.add("sunk");
+          cell.classList.add("sunk");
         } else if (result === "Miss") {
-            cell?.classList.add("miss");
+          cell.classList.add("isMissed");
         }
-    }
+      }
     
 
     // Updated handleShoot function to include attack type
     const handleShoot = async (row: number, col: number, targetPlayerId: string) => {
         if (!isCurrentTurn || !currentPlayerId || targetPlayerId === currentPlayerId) return;
-        
+    
         try {
-            // Send shot request with attack type (result might be an array for multiple hits)
-            const result = await connection?.invoke("MakeMove", "game-1", currentPlayerId, row, col, selectedAttack);
-        
-            // Assuming result is an array or object containing information about the hit/miss for each square
-            if (result) {
-                console.log(`${currentPlayerId} shot at (${row}, ${col}): ${result}`);
-                // Update game state if needed, to reflect missed shot or multiple hits
+            const turnResult = await connection?.invoke("MakeMove", "game-1", currentPlayerId, targetPlayerId, row, col, selectedAttack);
+    
+            if (turnResult) {
+                const { TargetPlayerId, AffectedCoordinates, Results } = turnResult;
+    
+                // Update the game state using the TurnResult
                 setGame((prevGame) => {
-                    if (!prevGame || !prevGame.players) return prevGame;
-        
+                    if (!prevGame) return prevGame;
+    
                     const updatedGame = { ...prevGame };
-                    const targetPlayer = updatedGame.players[targetPlayerId];
-        
+                    const targetPlayer = updatedGame.players[TargetPlayerId];
+    
                     if (targetPlayer) {
-                        if (Array.isArray(result)) {
-                            result.forEach(({ row, col, hit }) => {
-                                targetPlayer.board.grid[row][col].isHit = hit === 'hit';
-                                targetPlayer.board.grid[row][col].isMiss = hit === 'miss';
-                            });
-                        } else {
-                            targetPlayer.board.grid[result.row][result.col].isHit = result.hit === 'hit';
-                            targetPlayer.board.grid[result.row][result.col].isMiss = result.hit === 'miss';
-                        }
+                        AffectedCoordinates.forEach((coord: { Row: number; Col: number }, index: number) => {
+                            const result = Results[index];
+                            targetPlayer.board.grid[coord.Row][coord.Col].isHit = result === "Hit";
+                            targetPlayer.board.grid[coord.Row][coord.Col].isMiss = result === "Miss";
+                        });
                     }
+    
                     return updatedGame;
                 });
             }
@@ -154,14 +148,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ players, currentPlayerId, onShips
         }
     };
     
+    
 
     // Function to get a player's board by their ID
     const getPlayerBoard = (playerId: string) => {
-        if (game && game.players) {
-            const playerInGame = game.players[playerId];
-            return playerInGame ? playerInGame.board : null;
-        }
-        return null; 
+        return game?.players?.[playerId]?.board || null;
     };
 
     const getTeammate = (currentPlayerId: string) => {

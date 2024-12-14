@@ -228,7 +228,8 @@ const Board: React.FC<BoardProps> = ({
         {localBoard.map((row, rowIndex) =>
           row.map((cell, colIndex) => (
             <div
-              key={`${rowIndex}-${colIndex}`}
+              key={`${playerId}-${rowIndex}-${colIndex}`}
+              id={`cell-${playerId}-${rowIndex}-${colIndex}`}
               onClick={() => handleCellClick(rowIndex, colIndex)}
               className={
                 cell.isHit

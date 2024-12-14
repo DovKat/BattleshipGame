@@ -3,15 +3,16 @@ using Microsoft.AspNetCore.SignalR;
 public abstract class TurnProcessor
 {
     // Template Method
-    public async Task ProcessTurn(GameHub hub, string gameId, string playerId, int row, int col, string attackType)
+    public async Task<TurnResult> ProcessTurn(GameHub hub, string gameId, string playerId, string targetedPlayersId,int row, int col, string attackType)
     {
         if (!await ValidateTurn(hub, gameId, playerId))
         {
             await hub.Clients.Caller.SendAsync("MoveNotAllowed", "Invalid move.");
-            return;
+            return null;
         }
-        await ExecuteTurn(hub, gameId, playerId, row, col, attackType);
+        var result = await ExecuteTurn(hub, gameId, playerId, targetedPlayersId, row, col, attackType);
         await EndTurn(hub, gameId);
+        return result;
     }
 
     // Steps of the Template Method
@@ -34,7 +35,7 @@ public abstract class TurnProcessor
         return true;
     }
 
-    protected abstract Task ExecuteTurn(GameHub hub, string gameId, string playerId, int row, int col, string attackType);
+    protected abstract Task<TurnResult> ExecuteTurn(GameHub hub, string gameId, string playerId, string targetedPlayersId, int row, int col, string attackType);
 
     protected virtual async Task EndTurn(GameHub hub, string gameId)
     {

@@ -495,53 +495,55 @@ public class GameHub : Hub, IGameObserver
         await Console.Out.WriteLineAsync($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
     }
     
-    public async Task MakeMove(string gameId, string playerId, int row, int col, string attackType)
+    public async Task<TurnResult> MakeMove(string gameId, string playerId, string targetedPlayersId, int row, int col, string attackType)
     {
         try
         {
             if (_turnProcessors.TryGetValue(selectedMode, out var turnProcessor))
             {
                 // Process the turn
-                await turnProcessor.ProcessTurn(this, gameId, playerId, row, col, attackType);
+                var result = await turnProcessor.ProcessTurn(this, gameId, playerId, targetedPlayersId, row, col, attackType);
+                return result;
             }
             else
             {
                 Console.WriteLine("Invalid game mode.");
                 await Clients.Caller.SendAsync("Error", "Invalid game mode.");
+                return null;
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error in MakeMove: {ex.Message}");
             await Clients.Caller.SendAsync("Error", $"An error occurred: {ex.Message}");
+            return null;
         }
     }
     
-    public string ProcessMove(Team opponentTeam, int row, int col)
+    public string ProcessMove(Player player, int row, int col)
     {
-        foreach (var player in opponentTeam.Players)
+
+        var iterator = player.Board.GetIterator();
+
+        while (iterator.HasNext())
         {
-            var iterator = player.Board.GetIterator();
-
-            while (iterator.HasNext())
+            var cell = iterator.Next();
+            if (cell == player.Board.Grid[row][col]) // Check the targeted cell
             {
-                var cell = iterator.Next();
-                if (cell == player.Board.Grid[row][col]) // Check the targeted cell
+                if (cell.HasShip && !cell.IsHit)
                 {
-                    if (cell.HasShip && !cell.IsHit)
-                    {
-                        cell.IsHit = true; // Mark cell as hit
-                        var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
-                        ship.HitCount++;
+                    cell.IsHit = true; // Mark cell as hit
+                    var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
+                    ship.HitCount++;
 
-                        return ship.IsSunk ? "Sunk" : "Hit";
-                    }
-
-                    cell.IsMiss = true; // Mark as a miss
-                    return "Miss";
+                    return ship.IsSunk ? "Sunk" : "Hit";
                 }
+
+                cell.IsMiss = true; // Mark as a miss
+                return "Miss";
             }
         }
+
 
         return "Miss";
     }
