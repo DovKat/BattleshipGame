@@ -367,21 +367,24 @@ public class GameHub : Hub, IGameObserver
 }
     private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
-        foreach (var coord in coordinates)
+        foreach (var cell in board)
         {
-            // Check bounds
-            if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
-                coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+            foreach (var coord in coordinates)
             {
-                return false;
-            }
+                if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
+                    coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+                {
+                    return false; // Out of bounds
+                }
 
-            // Check for overlap
-            if (board.Grid[coord.Row][coord.Column].HasShip)
-            {
-                return false;
+                // Check for overlap
+                if (board.Grid[coord.Row][coord.Column] == cell && cell.HasShip)
+                {
+                    return false;
+                }
             }
         }
+
         return true;
     }
     public async Task PauseGame(string gameId)
@@ -550,19 +553,16 @@ public class GameHub : Hub, IGameObserver
         await Clients.Group(game.GameId).SendAsync("UpdateGameState", new { game.CurrentTurn, game.CurrentPlayerIndex });
     }
 
-    // Method to initialize a player's board
+    // Method to initialize a player's board | Example of C# iterator usage
     private Board InitializeBoard()
     {
-        var cells = new Cell[10][];
-        for (int i = 0; i < 10; i++)
-        {
-            cells[i] = new Cell[10];
-            for (int j = 0; j < 10; j++)
-            {
-                cells[i][j] = new Cell { HasShip = false, IsHit = false };
-            }
-        }
-        return new Board { Grid = cells, Ships = new List<Ship>() };
+        var grid = Enumerable.Range(0, 10)
+        .Select(_ => Enumerable.Range(0, 10)
+            .Select(__ => new Cell { HasShip = false, IsHit = false })
+            .ToArray())
+        .ToArray();
+
+        return new Board { Grid = grid, Ships = new List<Ship>() };
     }
 
     // Method to get connection ID
