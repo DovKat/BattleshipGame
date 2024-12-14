@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 
 public class TournamentTurnProcessor : TurnProcessor
 {
+    private readonly AttackStrategyFactory _strategyFactory = new();
     protected override async Task ExecuteTurn(GameHub hub, string gameId, string playerId, int row, int col, string attackType)
     {
         var game = hub.GetGame(gameId);
@@ -12,14 +13,7 @@ public class TournamentTurnProcessor : TurnProcessor
 
         if (game != null && player != null && opponentTeam != null)
         {
-            // Create the base attack strategy based on the attack type
-            IAttackStrategy baseAttack = attackType switch
-            {
-                "smallbomb" => new SmallBombAttack(),
-                "bigbomb" => new BigBombAttack(),
-                "megabomb" => new MegaBombAttack(),
-                _ => new RegularAttack() // Default attack type
-            };
+            IAttackStrategy baseAttack = _strategyFactory.GetStrategy(attackType.ToLower());
 
             // Apply decorators to the base attack strategy
             IAttackStrategy decoratedAttack = new LoggingDecorator(baseAttack);
