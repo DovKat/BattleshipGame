@@ -28,7 +28,7 @@ const Board: React.FC<BoardProps> = ({
   score,
   team,
 }) => {
-  const [localBoard, setLocalBoard] = useState<Cell[][]>(board);
+  const [localBoard, setLocalBoard] = useState<Cell[][]>(board || [[]]);
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
   const [ships, setShips] = useState<Ship[]>([
     {

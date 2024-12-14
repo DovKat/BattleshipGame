@@ -367,20 +367,23 @@ public class GameHub : Hub, IGameObserver
 }
     private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
-        foreach (var cell in board)
+        var iterator = board.GetIterator();
+
+        while (iterator.HasNext())
         {
+            var cell = iterator.Next();
+
             foreach (var coord in coordinates)
             {
                 if (coord.Row < 0 || coord.Row >= board.Grid.Length ||
-                    coord.Column < 0 || coord.Column >= board.Grid[0].Length)
+                    coord.Column < 0 || coord.Column >= board.Grid[coord.Row].Length)
                 {
                     return false; // Out of bounds
                 }
 
-                // Check for overlap
                 if (board.Grid[coord.Row][coord.Column] == cell && cell.HasShip)
                 {
-                    return false;
+                    return false; // Overlap detected
                 }
             }
         }
@@ -518,27 +521,29 @@ public class GameHub : Hub, IGameObserver
     {
         foreach (var player in opponentTeam.Players)
         {
-            var cell = player.Board.Grid[row][col];  // Get the cell being attacked
-            if (cell.HasShip && !cell.IsHit)
+            var iterator = player.Board.GetIterator();
+
+            while (iterator.HasNext())
             {
-                cell.IsHit = true;  // Mark the cell as hit
-                var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
-                ship.HitCount++;  // Increment the ship's hit count
-
-                if (ship.IsSunk)
+                var cell = iterator.Next();
+                if (cell == player.Board.Grid[row][col]) // Check the targeted cell
                 {
-                    return "Sunk";  // Ship is sunk
-                }
+                    if (cell.HasShip && !cell.IsHit)
+                    {
+                        cell.IsHit = true; // Mark cell as hit
+                        var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
+                        ship.HitCount++;
 
-                return "Hit";  // Ship is hit but not yet sunk
+                        return ship.IsSunk ? "Sunk" : "Hit";
+                    }
+
+                    cell.IsMiss = true; // Mark as a miss
+                    return "Miss";
+                }
             }
         }
-        opponentTeam.Players.ForEach(player =>
-        {
-            var missedCell = player.Board.Grid[row][col];
-            missedCell.IsMiss = true;  // Mark this cell as a miss
-        });
-        return "Miss";  // No ship, it's a miss
+
+        return "Miss";
     }
 
     public async void AdvanceTurn(Game game)
@@ -553,16 +558,19 @@ public class GameHub : Hub, IGameObserver
         await Clients.Group(game.GameId).SendAsync("UpdateGameState", new { game.CurrentTurn, game.CurrentPlayerIndex });
     }
 
-    // Method to initialize a player's board | Example of C# iterator usage
+    // Method to initialize a player's board
     private Board InitializeBoard()
     {
-        var grid = Enumerable.Range(0, 10)
-        .Select(_ => Enumerable.Range(0, 10)
-            .Select(__ => new Cell { HasShip = false, IsHit = false })
-            .ToArray())
-        .ToArray();
-
-        return new Board { Grid = grid, Ships = new List<Ship>() };
+        var cells = new Cell[10][];
+        for (int i = 0; i < 10; i++)
+        {
+            cells[i] = new Cell[10];
+            for (int j = 0; j < 10; j++)
+            {
+                cells[i][j] = new Cell { HasShip = false, IsHit = false };
+            }
+        }
+        return new Board { Grid = cells, Ships = new List<Ship>() };
     }
 
     // Method to get connection ID
