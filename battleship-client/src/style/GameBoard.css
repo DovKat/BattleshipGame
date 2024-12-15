@@ -95,3 +95,18 @@ h2 {
 .opponent-board .cell.hasShip {
     background-color: #d32f2f; 
 }
+
+.game-over-screen {
+    text-align: center;
+    margin-top: 50px;
+    color: #ff4c4c; /* Red color for emphasis */
+}
+
+.game-over-screen h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.game-over-screen p {
+    font-size: 1.5rem;
+}

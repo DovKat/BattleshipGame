@@ -22,4 +22,13 @@ public abstract class Ship : IPlaceable
         var placeCommand = new PlaceShipCommand(board, this, Coordinates);
         manager.ExecuteCommand(placeCommand);
     }
+
+    public void IncrementHitCount()
+    {
+        this.HitCount++;
+        if(HitCount == Length)
+        {
+            IsSunk = true;
+        }
+    }
 }

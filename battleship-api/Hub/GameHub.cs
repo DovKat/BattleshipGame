@@ -111,8 +111,6 @@ public class GameHub : Hub, IGameObserver
         }
     }
 
-
-
     public Game CreateGame(string gameId, string gameMode)
     {
         selectedMode = gameMode;
@@ -316,55 +314,52 @@ public class GameHub : Hub, IGameObserver
 
         return coordinates;
     }
+
     public async Task PlaceRandomShipsForDemo(string gameId)
-{
-    if (_games.TryGetValue(gameId, out var game))
     {
-        var random = new Random();
-        var shipTypes = new List<string> { "Carrier", "Battleship", "Destroyer", "Submarine", "PatrolBoat" };
-        
-        foreach (var team in game.Teams)
+        if (_games.TryGetValue(gameId, out var game))
         {
-            foreach (var player in team.Players)
+            var random = new Random();
+            var shipGroup = new ShipGroup();
+            var shipTypes = new List<string> { "Carrier", "Battleship", "Destroyer", "Submarine", "PatrolBoat" };
+
+            foreach (var team in game.Teams)
             {
-                foreach (var shipType in shipTypes)
+                foreach (var player in team.Players)
                 {
-                    ShipFactory shipFactory = new ShipFactory();
-                    var newShip = shipFactory.CreateShip(shipType);
-                    
-                    bool placed = false;
-                    while (!placed)
+                    foreach (var shipType in shipTypes)
                     {
-                        int row = random.Next(0, 10);
-                        int col = random.Next(0, 10);
-                        string orientation = random.Next(0, 2) == 0 ? "horizontal" : "vertical";
-                        var startCoordinate = new Coordinate { Row = row, Column = col };
-                        var shipCoordinates = CalculateShipCoordinates(startCoordinate, newShip.Length, orientation);
+                        var ship = new ShipFactory().CreateShip(shipType);
+                        bool placed = false;
 
-                        if (IsPlacementValid(player.Board, shipCoordinates))
+                        while (!placed)
                         {
-                            newShip.Coordinates = shipCoordinates;
-                            newShip.Orientation = orientation;
-                            newShip.isPlaced = true;
-                            player.Board.Ships.Add(newShip);
+                            int row = random.Next(0, 10);
+                            int col = random.Next(0, 10);
+                            string orientation = random.Next(0, 2) == 0 ? "horizontal" : "vertical";
+                            var startCoordinate = new Coordinate { Row = row, Column = col };
+                            var shipCoordinates = CalculateShipCoordinates(startCoordinate, ship.Length, orientation);
 
-                            foreach (var coord in shipCoordinates)
+                            if (IsPlacementValid(player.Board, shipCoordinates))
                             {
-                                player.Board.Grid[coord.Row][coord.Column].HasShip = true;
+                                ship.Coordinates = shipCoordinates;
+                                ship.Orientation = orientation;
+                                shipGroup.Add(ship); // Add ship to the group
+                                placed = true;
                             }
-
-                            placed = true;
                         }
                     }
-                }
 
-                await Clients.Client(player.Id).SendAsync("ShipPlacementComplete", player.Board);
+                    var commandManager = GetCommandManagerForPlayer(gameId, player.Id);
+                    shipGroup.Place(player.Board, commandManager); // Place all ships
+                    await Clients.Client(player.Id).SendAsync("ShipPlacementComplete", player.Board);
+                }
             }
+
+            await Clients.Group(gameId).SendAsync("UpdateGameState", game);
         }
-        
-        await Clients.Group(gameId).SendAsync("UpdateGameState", game);
     }
-}
+
     private bool IsPlacementValid(Board board, List<Coordinate> coordinates)
     {
         var iterator = board.GetIterator();
@@ -522,7 +517,6 @@ public class GameHub : Hub, IGameObserver
     
     public string ProcessMove(Player player, int row, int col)
     {
-
         var iterator = player.Board.GetIterator();
 
         while (iterator.HasNext())
@@ -534,7 +528,18 @@ public class GameHub : Hub, IGameObserver
                 {
                     cell.IsHit = true; // Mark cell as hit
                     var ship = player.Board.Ships.First(s => s.Coordinates.Any(c => c.Row == row && c.Column == col));
-                    ship.HitCount++;
+                    ship.IncrementHitCount();
+
+                    var game = _games.Values.First(g => g.Players.ContainsValue(player));
+                    var team = game.Teams.First(t => t.Players.Contains(player));
+
+                    if (AreAllShipsSunkForTeam(team))
+                    {
+                        string losingTeam = team.Name;
+                        string winningTeam = game.Teams.First(t => t != team).Name;
+
+                        Clients.Group(game.GameId).SendAsync("GameOver", $"{losingTeam} loses! {winningTeam} wins!");
+                    }
 
                     return ship.IsSunk ? "Sunk" : "Hit";
                 }
@@ -546,6 +551,18 @@ public class GameHub : Hub, IGameObserver
 
 
         return "Miss";
+    }
+
+    private bool AreAllShipsSunkForTeam(Team team)
+    {
+        foreach (var player in team.Players)
+        {
+            if (player.Board.Ships.Any(ship => !ship.IsSunk))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     public async void AdvanceTurn(Game game)

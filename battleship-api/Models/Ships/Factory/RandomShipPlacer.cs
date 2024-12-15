@@ -31,18 +31,14 @@ public class RandomShipPlacer
 
             while (!placed)
             {
-                // Use the factory to create a ship
                 ship = _shipFactory.CreateShip(shipType);
 
-                // Randomize orientation and starting position
                 string orientation = _random.Next(2) == 0 ? "horizontal" : "vertical";
                 int row = _random.Next(_boardSize);
                 int col = _random.Next(_boardSize);
 
-                // Calculate coordinates
                 var shipCoordinates = CalculateShipCoordinates(new Coordinate { Row = row, Column = col }, ship.Length, orientation);
 
-                // Validate placement
                 if (IsPlacementValid(board, shipCoordinates))
                 {
                     ship.Coordinates = shipCoordinates;
