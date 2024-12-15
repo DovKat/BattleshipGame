@@ -248,7 +248,7 @@ const Board: React.FC<BoardProps> = ({
                 backgroundColor: cell.isHit
                   ? "red"
                   : cell.isMiss
-                  ? "lightgray" // Light gray for missed shots
+                  ? "#a9a9a9" // Light gray for missed shots
                   : cell.hasShip
                   ? isPlayerBoard || isTeammateBoard
                     ? "blue"

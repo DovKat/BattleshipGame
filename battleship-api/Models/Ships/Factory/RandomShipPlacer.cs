@@ -22,6 +22,8 @@ public class RandomShipPlacer
     public void FillBoardWithRandomShips(Board board, CommandManager manager)
     {
         var shipTypes = new List<string> { "Destroyer", "Submarine", "Cruiser", "Battleship", "Carrier" };
+        var shipGroup = new ShipGroup();
+
         foreach (var shipType in shipTypes)
         {
             Ship ship;
@@ -29,7 +31,7 @@ public class RandomShipPlacer
 
             while (!placed)
             {
-                // Create the ship
+                // Use the factory to create a ship
                 ship = _shipFactory.CreateShip(shipType);
 
                 // Randomize orientation and starting position
@@ -40,19 +42,21 @@ public class RandomShipPlacer
                 // Calculate coordinates
                 var shipCoordinates = CalculateShipCoordinates(new Coordinate { Row = row, Column = col }, ship.Length, orientation);
 
-                // Validate and place if valid
+                // Validate placement
                 if (IsPlacementValid(board, shipCoordinates))
                 {
                     ship.Coordinates = shipCoordinates;
                     ship.Orientation = orientation;
-                    var placeCommand = new PlaceShipCommand(board, ship, shipCoordinates);
-                    manager.ExecuteCommand(placeCommand);
-                    //PlaceShipOnBoard(board, ship);
+                    shipGroup.Add(ship); // Add ship to the group
                     placed = true;
                 }
             }
         }
+
+        // Place all ships in the group
+        shipGroup.Place(board, manager);
     }
+
 
     private void clearBoard(Board board, CommandManager manager)
     {
