@@ -18,7 +18,7 @@ builder.Services.AddCors(options =>
         });
     })
     .AddSignalR() //https://battleshipgamehub.service.signalr.net
-    .AddAzureSignalR(options => options.ConnectionString = "Endpoint=https://battleshipgamehub.service.signalr.net;AccessKey=FOZrHncHR81uX9kwxjAo3BRPxw0RaG67Q3A3R6wancwYbcHJwOiEJQQJ99ALACi5YpzXJ3w3AAAAASRS81Y0;Version=1.0;");
+    .AddAzureSignalR(options => options.ConnectionString = "Endpoint=https://secondaryhub.service.signalr.net;AccessKey=1zaJ0v67QM59KZTWfFlbkvB3xzI8OBie2ZdfU9b3bNYekGe8OAUBJQQJ99ALACi5YpzXJ3w3AAAAASRSfoko;Version=1.0;");
 var app = builder.Build();
 
 // Apply CORS policy before other middleware

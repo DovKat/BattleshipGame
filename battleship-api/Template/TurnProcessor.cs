@@ -35,7 +35,32 @@ public abstract class TurnProcessor
         return true;
     }
 
-    protected abstract Task<TurnResult> ExecuteTurn(GameHub hub, string gameId, string playerId, string targetedPlayersId, int row, int col, string attackType);
+    protected virtual async Task<TurnResult> ExecuteTurn(GameHub hub, string gameId, string playerId,
+        string targetedPlayerId, int row, int col, string attackType)
+    {
+        var game = hub.GetGame(gameId);
+        var player = game?.Players.GetValueOrDefault(playerId);
+        var opponentPlayer = game.Players.GetValueOrDefault(targetedPlayerId);
+        var attackResult = hub.ProcessMove(opponentPlayer, row, col);
+        await hub.Clients.Group(gameId).SendAsync("MoveResult", new
+        {
+            PlayerId = playerId,
+            Row = row,
+            Col =  col,
+            Result = attackResult
+        });
+        var results = new List<string>();
+        results.Add(attackResult);
+        return new TurnResult
+        {
+            AffectedCoordinates = new List<Coordinate>
+                {
+                    new Coordinate { Row = row, Column = col }
+                } 
+                ,
+            Results = results
+        };
+    }
 
     protected virtual async Task EndTurn(GameHub hub, string gameId)
     {

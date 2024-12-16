@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.SignalR;
 public class StandardTurnProcessor : TurnProcessor
 {
     private readonly AttackStrategyFactory _strategyFactory = new();
-    protected override async Task<TurnResult> ExecuteTurn(GameHub hub, string gameId, string playerId, string targetedPlayerId, int row, int col, string attackType)
+
+    protected sealed override async Task<TurnResult> ExecuteTurn(GameHub hub, string gameId, string playerId, string targetedPlayerId, int row, int col, string attackType)
     {
         var game = hub.GetGame(gameId);
         var player = game.Players.GetValueOrDefault(playerId);
