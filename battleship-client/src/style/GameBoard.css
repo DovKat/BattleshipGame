@@ -1,112 +1,135 @@
-
-
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f2f5;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background-color: #f0f2f5;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
 h2 {
-    text-align: center;
-    font-size: 24px;
-    margin-bottom: 20px;
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 20px;
 }
 
 .game-board-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .boards-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .board-row {
-    display: flex;
-    justify-content: space-between;
+  display: flex;
+  justify-content: space-between;
 }
 
-
 .board-wrapper {
-    border: 2px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    background-color: #ffffff;
-    flex: 1; 
-    margin-right: 10px; 
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #ffffff;
+  flex: 1;
+  margin-right: 10px;
 }
 
 .board-title {
-    text-align: center;
-    font-size: 18px;
-    margin-bottom: 10px;
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 10px;
 }
 
 .cell {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #ddd;
-    background-color: #f5f5f5;
-    transition: background-color 0.2s ease;
-    cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ddd;
+  background-color: #f5f5f5;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
 }
 
 .cell.empty:hover {
-    background-color: #e0e0e0;
+  background-color: #e0e0e0;
 }
 
 .cell.hasShip {
-    background-color: #0074cc;
+  background-color: #0074cc;
 }
 
 .cell.isHit {
-    background-color: #cc0000;
+  background-color: #cc0000;
 }
 
-.player-board{
-    background-color: #cdf0d0; 
+.player-board {
+  background-color: #cdf0d0;
 }
 
-.teammate-board{
-    background-color: #e8f5e9; 
+.teammate-board {
+  background-color: #e8f5e9;
 }
 
 .opponent-board {
-    background-color: #ffe5e5; 
+  background-color: #ffe5e5;
 }
 
 /* Player-specific styling */
 .player-board .cell.hasShip {
-    background-color: #006622; 
+  background-color: #006622;
 }
 
 .teammate-board .cell.hasShip {
-    background-color: #4caf50; 
+  background-color: #4caf50;
 }
 
 .opponent-board .cell.hasShip {
-    background-color: #d32f2f; 
+  background-color: #d32f2f;
 }
 
 .game-over-screen {
-    text-align: center;
-    margin-top: 50px;
-    color: #ff4c4c; /* Red color for emphasis */
+  text-align: center;
+  margin-top: 50px;
+  color: #ff4c4c; /* Red color for emphasis */
 }
 
 .game-over-screen h1 {
-    font-size: 3rem;
-    margin-bottom: 20px;
+  font-size: 3rem;
+  margin-bottom: 20px;
 }
 
 .game-over-screen p {
-    font-size: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.command-input {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.command-input input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.command-input button {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.command-input button:hover {
+  background-color: #0056b3;
 }

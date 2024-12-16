@@ -18,6 +18,8 @@ public class GameHub : Hub, IGameObserver
     private static readonly Dictionary<string, string> _gameModes = new Dictionary<string, string>(); // Stores selected game modes per gameId
     private static string selectedMode = "";
     private static IScoringSystem _scoringSystem;
+    private readonly CommandInterpreter _commandInterpreter = new CommandInterpreter();
+
 
     public GameHub(ILogger<GameHub> logger)
     {
@@ -385,6 +387,7 @@ public class GameHub : Hub, IGameObserver
 
         return true;
     }
+
     public async Task PauseGame(string gameId)
     {
         if (_games.TryGetValue(gameId, out var game))
@@ -489,7 +492,53 @@ public class GameHub : Hub, IGameObserver
 
         await Console.Out.WriteLineAsync($"{playerID} current score is {playerScore}. Points received: {points}. Shot result: {hitResult}");
     }
-    
+
+    public async Task InterpretCommand(string commandToInterpret)
+    {
+        try
+        {
+            // Parse the command
+            if (!_commandInterpreter.ParseAttackCommand(commandToInterpret, out var details))
+            {
+                await Clients.Caller.SendAsync("Error", "Invalid command format.");
+                return;
+            }
+
+            // Log the parsed details for debugging
+            _logger.LogInformation($"Command parsed successfully: GameId={details.GameId}, CurrentPlayerId={details.CurrentPlayerId}, " +
+                                    $"TargetId={details.TargetId}, Row={details.Row}, Column={details.Column}, AttackType={details.AttackType}");
+
+            // Call the game logic to make the move
+            var result = await MakeMove(
+                details.GameId,
+                details.CurrentPlayerId,
+                details.TargetId,
+                details.Row,
+                details.Column,
+                details.AttackType
+            );
+
+            // Get the updated game state
+            var game = GetGame(details.GameId);
+            if (game == null)
+            {
+                _logger.LogWarning($"Game with ID {details.GameId} not found.");
+                await Clients.Caller.SendAsync("Error", $"Game with ID {details.GameId} not found.");
+                return;
+            }
+
+            // Notify clients with the updated game state
+            _logger.LogInformation($"Updating game state for GameId={game.GameId}.");
+            await Clients.Group(game.GameId).SendAsync("UpdateGameState", game);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error in InterpretCommand: {ex.Message}");
+            await Clients.Caller.SendAsync("Error", $"Failed to interpret command: {ex.Message}");
+        }
+    }
+
+
     public async Task<TurnResult> MakeMove(string gameId, string playerId, string targetedPlayersId, int row, int col, string attackType)
     {
         try
